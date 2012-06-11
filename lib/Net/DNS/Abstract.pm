@@ -74,6 +74,8 @@ sub load_plugin {
     load $module;
     my $new_mod =  $module->new();
     $self->register($new_mod->setup());
+    print Dumper("load", $self->registry)
+        if $self->debug();
     return $new_mod;
 }
 

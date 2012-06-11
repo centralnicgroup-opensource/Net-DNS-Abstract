@@ -1,4 +1,4 @@
-package Net::DNS::Abstract::Plugins::InternetX;
+package Net::DNS::Abstract::Plugins::Hexonet;
 
 use 5.010;
 use Any::Moose;
@@ -14,7 +14,7 @@ Register in the Net::DNS dispatch table for backend calls
 sub setup {
     my ($self) = @_;
 
-    return { InternetX => { axfr => \&status_zone } };
+    return { Hexonet => { axfr => \&status_zone } };
 }
 
 
@@ -29,7 +29,7 @@ sub status_zone {
 
     my $zone = {
         domain => $domain,   
-        interface => 'InternetX',
+        interface => 'Hexonet',
     };
     return $zone;
 }

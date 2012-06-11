@@ -17,9 +17,32 @@ plan qw/no_plan/;
     ok($b);
     cmp_deeply(
         $b, {
-            domain => 'example.com'
+            domain => 'example.com',
+            interface => 'InternetX',
         },
-        "check hash structure"
+        "check hash structure for InternetX"
+    );
+    print Dumper $b;
+    $a = { domain => 'example.com', interface => 'Hexonet' };
+    $b = $dns->axfr($a);
+    ok($b);
+    cmp_deeply(
+        $b, {
+            domain => 'example.com',
+            interface => 'Hexonet',
+        },
+        "check hash structure for Hexonet"
+    );
+    print Dumper $b;
+    $a = { domain => 'example.com', interface => 'InternetX' };
+    $b = $dns->axfr($a);
+    ok($b);
+    cmp_deeply(
+        $b, {
+            domain => 'example.com',
+            interface => 'InternetX',
+        },
+        "check hash structure for InternetX"
     );
     print Dumper $b;
 
