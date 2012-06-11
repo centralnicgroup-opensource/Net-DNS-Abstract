@@ -2,6 +2,7 @@ package Net::DNS::Abstract::Plugins::InternetX;
 
 use 5.010;
 use Any::Moose;
+use Net::DNS;
 
 extends 'Net::DNS::Abstract';
 
@@ -11,7 +12,7 @@ Register in the Net::DNS dispatch table for backend calls
 
 =cut
 
-sub setup {
+sub provides {
     my ($self) = @_;
 
     return { InternetX => { axfr => \&status_zone } };

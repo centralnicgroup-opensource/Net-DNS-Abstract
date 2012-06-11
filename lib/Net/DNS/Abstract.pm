@@ -73,7 +73,7 @@ sub load_plugin {
     my $module = 'Net::DNS::Abstract::Plugins::'.$plugin;
     load $module;
     my $new_mod =  $module->new();
-    $self->register($new_mod->setup());
+    $self->register($new_mod->provides());
     print Dumper("load", $self->registry)
         if $self->debug();
     return $new_mod;

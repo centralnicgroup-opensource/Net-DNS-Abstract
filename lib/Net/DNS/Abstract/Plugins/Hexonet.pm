@@ -11,7 +11,7 @@ Register in the Net::DNS dispatch table for backend calls
 
 =cut
 
-sub setup {
+sub provides {
     my ($self) = @_;
 
     return { Hexonet => { axfr => \&status_zone } };
