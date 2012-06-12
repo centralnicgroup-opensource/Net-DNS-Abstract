@@ -32,7 +32,6 @@ has 'registry' => (
     default => sub { {} },
 );
 
-
 =head1 SYNOPSIS
 
 Net::DNS is the de-facto standard and battle tested perl DNS
@@ -53,15 +52,14 @@ we need a backend identifyer that we have a API plugin for.
 =cut
 
 sub axfr {
-    my($self, $params) = @_;
+    my ($self, $params) = @_;
 
     my $plugin = $self->load_plugin($params->{interface});
-    my $ref = $self->registry->{$params->{interface}}->{axfr};
-        
+    my $ref    = $self->registry->{ $params->{interface} }->{axfr};
+
     my $zone = $plugin->$ref($params->{domain});
     return $zone;
 }
-
 
 =head2 update
 
@@ -76,12 +74,11 @@ sub update {
     carp "No Plugin defined" unless $interface;
 
     my $plugin = $self->load_plugin($interface);
-    my $ref = $self->registry->{$interface}->{update};
-        
+    my $ref    = $self->registry->{$interface}->{update};
+
     my $zone = $plugin->$ref($dns);
     return $zone;
 }
-
 
 =head2 to_net_dns
 
@@ -90,18 +87,26 @@ Converts a zone from our generic representation to Net::DNS format.
 =cut
 
 sub to_net_dns {
-    my($self, $zone) = @_;
+    my ($self, $zone) = @_;
 
     my $dns = Net::DNS::Update->new($zone->{domain}, 'IN');
 
     print Dumper($zone) if $self->debug();
+
     # TODO this SOA record needs cleanup and debugging!
     $dns->push(
-        update => rr_add($zone->{domain}.' '.$zone->{soa}->{ttl}.' IN SOA '
-            .$zone->{ns}->[0]->{name}.' '.$zone->{soa}->{email}
-            .' '.time.' '.$zone->{soa}->{ttl}.' '.$zone->{soa}->{retry}
-            .$zone->{soa}->{expire}.' '.$zone->{soa}->{ttl}
-        ));
+        update => rr_add(
+                  $zone->{domain} . ' '
+                . $zone->{soa}->{ttl}
+                . ' IN SOA '
+                . $zone->{ns}->[0]->{name} . ' '
+                . $zone->{soa}->{email} . ' '
+                . time . ' '
+                . $zone->{soa}->{ttl} . ' '
+                . $zone->{soa}->{retry}
+                . $zone->{soa}->{expire} . ' '
+                . $zone->{soa}->{ttl}));
+
     # convert RR section
     foreach my $rr (@{ $zone->{rr} }) {
         given ($rr->{type}) {
@@ -109,7 +114,9 @@ sub to_net_dns {
                 $dns->push(
                     update => Net::DNS::RR->new(
                         name => (
-                            $rr->{name} ? $rr->{name} . '.' . $zone->{domain} : $zone->{domain}
+                              $rr->{name}
+                            ? $rr->{name} . '.' . $zone->{domain}
+                            : $zone->{domain}
                         ),
                         class   => 'IN',
                         ttl     => $rr->{ttl},
@@ -121,7 +128,9 @@ sub to_net_dns {
                 $dns->push(
                     update => Net::DNS::RR->new(
                         name => (
-                            $rr->{name} ? $rr->{name} . '.' . $zone->{domain} : $zone->{domain}
+                              $rr->{name}
+                            ? $rr->{name} . '.' . $zone->{domain}
+                            : $zone->{domain}
                         ),
                         class => 'IN',
                         ttl   => $rr->{ttl},
@@ -133,7 +142,9 @@ sub to_net_dns {
                 $dns->push(
                     update => Net::DNS::RR->new(
                         name => (
-                            $rr->{name} ? $rr->{name} . '.' . $zone->{domain} : $zone->{domain}
+                              $rr->{name}
+                            ? $rr->{name} . '.' . $zone->{domain}
+                            : $zone->{domain}
                         ),
                         class    => 'IN',
                         ttl      => $rr->{ttl},
@@ -147,7 +158,9 @@ sub to_net_dns {
                 $dns->push(
                     update => Net::DNS::RR->new(
                         name => (
-                            $rr->{name} ? $rr->{name} . '.' . $zone->{domain} : $zone->{domain}
+                              $rr->{name}
+                            ? $rr->{name} . '.' . $zone->{domain}
+                            : $zone->{domain}
                         ),
                         class  => 'IN',
                         ttl    => $rr->{ttl},
@@ -162,7 +175,9 @@ sub to_net_dns {
                 $dns->push(
                     update => Net::DNS::RR->new(
                         name => (
-                            $rr->{name} ? $rr->{name} . '.' . $zone->{domain} : $zone->{domain}
+                              $rr->{name}
+                            ? $rr->{name} . '.' . $zone->{domain}
+                            : $zone->{domain}
                         ),
                         class   => 'IN',
                         ttl     => $rr->{ttl},
@@ -172,6 +187,7 @@ sub to_net_dns {
             }
         }
     }
+
     # convert NS section
     foreach my $rr (@{ $zone->{ns} }) {
         $dns->push(
@@ -188,8 +204,6 @@ sub to_net_dns {
     return $dns;
 }
 
-
-
 =head2 from_net_dns
 
 Convert a Net::DNS object into our normalized format
@@ -197,89 +211,85 @@ Convert a Net::DNS object into our normalized format
 =cut
 
 sub from_net_dns {
-    my($self, $dns) = @_;
+    my ($self, $dns) = @_;
 
     my $zone;
-    my $domain; # FIXME possible race condition!!
-    foreach my $rr (@{$dns->{authority}}){
-        given($rr->type){
-            when('SOA'){
+    my $domain;    # FIXME possible race condition!!
+    foreach my $rr (@{ $dns->{authority} }) {
+        given ($rr->type) {
+            my $name = $rr->name;
+            $name =~ s/\.?$domain$//;
+            when ('SOA') {
                 $zone->{soa} = {
-                     'retry' => $rr->retry,
-                     'email' => $rr->rname,
-                     'refresh' => $rr->refresh,
-                     'ttl' => $rr->ttl,
-                     'expire' => $rr->expire,
+                    'retry'       => $rr->retry,
+                        'email'   => $rr->rname,
+                        'refresh' => $rr->refresh,
+                        'ttl'     => $rr->ttl,
+                        'expire'  => $rr->expire,
                 };
                 $zone->{domain} = $rr->name;
                 $domain = $rr->name;
             }
-            when('NS'){
-                push(@{$zone->{ns}}, {name => $rr->nsdname});
-            }
-            when (/^A{1,4}$/) {
-                my $name = $rr->name;
-                $name =~ s/\.?$domain$//;
-                push(@{$zone->{rr}},{
-                        name => $name || undef,
-                        ttl     => $rr->ttl,
-                        type    => $rr->type,
-                        value   => $rr->address,
+            when ('NS') {
+                push(
+                    @{ $zone->{ns} },
+                    {
+                        name => $rr->nsdname
                     });
             }
-            # TODO go through the rest and clean up
+            when (/^A{1,4}$/) {
+                push(
+                    @{ $zone->{rr} },
+                    {
+                        name => $name || undef,
+                            ttl   => $rr->ttl,
+                            type  => $rr->type,
+                            value => $rr->address,
+                    });
+            }
             when ('CNAME') {
-                $dns->push(
-                    update => Net::DNS::RR->new(
-                        name => (
-                            $rr->{name} ? $rr->{name} . '.' . $zone->{domain} : $zone->{domain}
-                        ),
-                        class => 'IN',
-                        ttl   => $rr->{ttl},
-                        type  => $rr->{type},
-                        cname => $rr->{value},
-                    ));
+                push(
+                    @{ $zone->{rr} },
+                    {
+                        name => $name || undef,
+                            ttl   => $rr->ttl,
+                            type  => $rr->type,
+                            value => $rr->cname,
+                    });
             }
-            when (/^mx$/i) {
-                $dns->push(
-                    update => Net::DNS::RR->new(
-                        name => (
-                            $rr->{name} ? $rr->{name} . '.' . $zone->{domain} : $zone->{domain}
-                        ),
-                        class    => 'IN',
-                        ttl      => $rr->{ttl},
-                        type     => $rr->{type},
-                        exchange => $rr->{value},
-                        prio     => $rr->{prio},
-                    ));
+            when ('MX') {
+                push(
+                    @{ $zone->{rr} },
+                    {
+                        name => $name || undef,
+                            ttl   => $rr->ttl,
+                            type  => $rr->type,
+                            prio  => $rr->prio,
+                            value => $rr->exchange,
+                    });
             }
-            when (/^srv$/i) {
-                my ($weight, $port, $target) = split(/\s/, $rr->{value}, 3);
-                $dns->push(
-                    update => Net::DNS::RR->new(
-                        name => (
-                            $rr->{name} ? $rr->{name} . '.' . $zone->{domain} : $zone->{domain}
-                        ),
-                        class  => 'IN',
-                        ttl    => $rr->{ttl},
-                        type   => $rr->{type},
-                        target => $target,
-                        weight => $weight,
-                        port   => $port,
-                        prio   => $rr->{prio},
-                    ));
+            when ('SRV') {
+                push(
+                    @{ $zone->{rr} },
+                    {
+                        name => $name || undef,
+                            ttl   => $rr->ttl,
+                            type  => $rr->type,
+                            prio  => $rr->prio,
+                            value => $rr->weight . ' '
+                            . $rr->port . ' '
+                            . $rr->target,
+                    });
             }
-            when (/^txt$/i) {
-                $dns->push(
-                    update => Net::DNS::RR->new(
-                        name => (
-                            $rr->{name} ? $rr->{name} . '.' . $zone->{domain} : $zone->{domain}
-                        ),
-                        class   => 'IN',
-                        ttl     => $rr->{ttl},
-                        type    => $rr->{type},
-                        txtdata => $rr->{value},
-                    ));
+            when ('TXT') {
+                push(
+                    @{ $zone->{rr} },
+                    {
+                        name => $name || undef,
+                            ttl   => $rr->ttl,
+                            type  => $rr->type,
+                            value => $rr->txtdata,
+                    });
             }
         }
 
@@ -294,7 +304,7 @@ Stringify a Net::DNS object
 =cut
 
 sub to_string {
-    my($self, $dns) = @_;
+    my ($self, $dns) = @_;
 
     return $dns->string;
 }
@@ -306,17 +316,16 @@ Loads a Plugin for Net::DNS::Abstract
 =cut
 
 sub load_plugin {
-    my($self, $plugin) = @_;
+    my ($self, $plugin) = @_;
 
-    my $module = 'Net::DNS::Abstract::Plugins::'.$plugin;
+    my $module = 'Net::DNS::Abstract::Plugins::' . $plugin;
     load $module;
-    my $new_mod =  $module->new();
+    my $new_mod = $module->new();
     $self->register($new_mod->provides());
     print Dumper("load", $self->registry)
         if $self->debug();
     return $new_mod;
 }
-
 
 =head2 register
 
@@ -326,9 +335,9 @@ need for dispatching).
 =cut
 
 sub register {
-    my($self, $params) = @_;
+    my ($self, $params) = @_;
 
-    foreach my $key (keys %{$params}){
+    foreach my $key (keys %{$params}) {
         $self->registry->{$key} = $params->{$key};
     }
     return;
