@@ -17,12 +17,22 @@ plan qw/no_plan/;
     ok($b);
     cmp_deeply(
         $b, {
-            domain => 'example.com',
+            domain => 'domain.tld',
             interface => 'Cached',
         },
         "check hash structure for Cached"
     );
     print Dumper $b;
+    my $c = $dns->update($b, 'Cached');
+    ok($c);
+    cmp_deeply(
+        $c, {
+            domain => 'domain.tld',
+            interface => 'Cached',
+        },
+        "check hash structure for Cached"
+    );
+    print Dumper $c;
 
 }
 
