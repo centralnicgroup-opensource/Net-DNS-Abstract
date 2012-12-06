@@ -4,11 +4,11 @@ use Test::More;
 use Test::Deep;
 use lib 'lib';
 
-plan qw/no_plan/;
+BEGIN { use_ok('Net::DNS::Abstract'); }
 
-{
-
-    BEGIN { use_ok('Net::DNS::Abstract'); }
+subtest 'Author Tests', sub {
+    plan skip_all => 'Author test. Set $ENV{TEST_AUTHOR} to a true value to run.'
+        if (not $ENV{TEST_AUTHOR});
     my $dns = Net::DNS::Abstract->new();
     ok($dns);
 
@@ -17,7 +17,7 @@ plan qw/no_plan/;
     ok($b);
     cmp_deeply(
         $b, {
-            domain => 'lnz.me',
+            domain    => 'lnz.me',
             interface => 'Cached',
         },
         "check hash structure for Cached"
@@ -27,12 +27,12 @@ plan qw/no_plan/;
     ok($c);
     cmp_deeply(
         $c, {
-            domain => 'lnz.me',
+            domain    => 'lnz.me',
             interface => 'Cached',
         },
         "check hash structure for Cached"
     );
     print Dumper $c;
+};
 
-}
-
+done_testing();
