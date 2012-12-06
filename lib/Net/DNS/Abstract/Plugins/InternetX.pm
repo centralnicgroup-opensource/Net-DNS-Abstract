@@ -50,7 +50,7 @@ sub _parse_ix {
 
     #return { error => $zone } unless $zone->{code} eq 'S0205';
     my $domain = $zone->{name}->{content};
-    my $packet = new Net::DNS::Packet($domain);
+    my $packet = new Net::DNS::Packet($domain, 'AXFR');
 
     $packet->push(
         answer => new Net::DNS::RR(
@@ -67,6 +67,8 @@ sub _parse_ix {
     if (ref $zone->{rr} eq 'ARRAY') {
         foreach my $rr (@{ $zone->{rr} }) {
             $rr->{name}->{content} = ''
+                unless exists $rr->{name}->{content};
+            $rr->{name}->{content} = ''
                 if ($rr->{name}->{content} eq $domain);
             $rr->{value}->{content} =~ s/\.+$//;
             $packet->push(
@@ -82,7 +84,9 @@ sub _parse_ix {
         }
     }
     else {
-        undef($zone->{rr}->{name}->{content})
+        $zone->{rr}->{name}->{content} = ''
+            unless exists $zone->{rr}->{name}->{content};
+        $zone->{rr}->{name}->{content} = ''
             if ($zone->{rr}->{name}->{content} eq $domain);
         $zone->{rr}->{value}->{content} =~ s/\.+$//;
         $packet->push(
@@ -107,6 +111,8 @@ sub _parse_ix {
                 $domain
             ));
     }
+    # TODO check if we still want to convert old www_include records or
+    # not
     #if ($zone->{www_include} && ($zone->{www_include}->{content} == 1)) {
     #    foreach my $r (@rr) {
     #        next unless $r->{type} eq 'A';
