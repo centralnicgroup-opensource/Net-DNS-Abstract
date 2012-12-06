@@ -4,6 +4,7 @@ use 5.010;
 use Any::Moose;
 use Module::Load;
 use Net::DNS;
+use Net::DNS::Packet;
 use Carp;
 use Data::Dumper;
 
@@ -44,10 +45,14 @@ quirks. We try to provide one unified interface here.
 =head2 axfr
 
 Do a zone transfer (actually poll a zone from a 3rd party provider) and
-return a list of Net::DNS::RR objects. Instead of a list of nameservers
+return a list of Net::DNS::RR objects. Additional to a list of nameservers
 we need a backend identifyer that we have a API plugin for.
 
-    axfr({ domain => 'example.com', interface => 'InternetX'})
+    axfr({ 
+        domain => 'example.com', 
+        interface => 'InternetX', 
+        ns => ['ns1.provider.net']
+    })
 
 =cut
 
@@ -55,9 +60,14 @@ sub axfr {
     my ($self, $params) = @_;
 
     my $plugin = $self->load_plugin($params->{interface});
-    my $ref    = $self->registry->{ $params->{interface} }->{axfr};
+    foreach my $key (keys %{$params}){
+        next unless $key =~ m{ref};
+        eval{$plugin->$key($params->{$key})};
+        warn $@ if $@;
+    }
+    my $ref = $self->registry->{ $params->{interface} }->{axfr};
 
-    my $zone = $plugin->$ref($params->{domain});
+    my $zone = $plugin->$ref($params->{domain}, $params->{ns});
     return $zone;
 }
 
@@ -109,7 +119,7 @@ sub to_net_dns {
 
     # convert RR section
     foreach my $rr (@{ $zone->{rr} }) {
-        $self->add_rr($dns, $rr);
+        $self->add_rr_update($dns, $rr);
     }
 
     # convert NS section
@@ -135,90 +145,129 @@ into a Net::DNS::RR object.
 
 =cut
 
-sub add_rr {
+sub add_rr_update {
     my ($self, $dns, $rr) = @_;
 
+    return $dns->push(
+        update => $self->rr_from_hash($rr, ($dns->question)[0]->qname));
+}
+
+=head2 rr_from_hash
+
+Create a Net::DNS::RR object from a hash
+
+=cut
+
+sub rr_from_hash {
+    my ($self, $rr, $domain) = @_;
+
+    print Dumper($rr, $domain) if $self->debug;
+    # TODO add SOA record support
     given ($rr->{type}) {
         when (/^a{1,4}$/i) {
-            $dns->push(
-                update => Net::DNS::RR->new(
+            return Net::DNS::RR->new(
                     name => (
                           $rr->{name}
-                        ? $rr->{name} . '.' . ($dns->question)[0]->qname
-                        : ($dns->question)[0]->qname
+                        ? $rr->{name} . '.' . $domain
+                        : $domain
                     ),
                     class   => 'IN',
-                    ttl     => $rr->{ttl},
+                    ttl     => $rr->{ttl} || 3600,
                     type    => $rr->{type},
                     address => $rr->{value},
-                ));
+                );
         }
         when (/^cname$/i) {
-            $dns->push(
-                update => Net::DNS::RR->new(
+            return Net::DNS::RR->new(
                     name => (
                           $rr->{name}
-                        ? $rr->{name} . '.' . ($dns->question)[0]->qname
-                        : ($dns->question)[0]->qname
+                        ? $rr->{name} . '.' . $domain
+                        : $domain
                     ),
                     class => 'IN',
-                    ttl   => $rr->{ttl},
+                    ttl   => $rr->{ttl} || 3600,
                     type  => $rr->{type},
                     cname => $rr->{value},
-                ));
+                );
         }
         when (/^mx$/i) {
-            $dns->push(
-                update => Net::DNS::RR->new(
+            return Net::DNS::RR->new(
                     name => (
                           $rr->{name}
-                        ? $rr->{name} . '.' . ($dns->question)[0]->qname
-                        : ($dns->question)[0]->qname
+                        ? $rr->{name} . '.' . $domain
+                        : $domain
                     ),
                     class    => 'IN',
-                    ttl      => $rr->{ttl},
+                    ttl      => $rr->{ttl} || 14400,
                     type     => $rr->{type},
                     exchange => $rr->{value},
                     prio     => $rr->{prio},
-                ));
+                );
         }
         when (/^srv$/i) {
             my ($weight, $port, $target) = split(/\s/, $rr->{value}, 3);
-            $dns->push(
-                update => Net::DNS::RR->new(
+            return Net::DNS::RR->new(
                     name => (
                           $rr->{name}
-                        ? $rr->{name} . '.' . ($dns->question)[0]->qname
-                        : ($dns->question)[0]->qname
+                        ? $rr->{name} . '.' . $domain
+                        : $domain
                     ),
                     class  => 'IN',
-                    ttl    => $rr->{ttl},
+                    ttl    => $rr->{ttl} || 14400,
                     type   => $rr->{type},
                     target => $target,
                     weight => $weight,
                     port   => $port,
                     prio   => $rr->{prio},
-                ));
+                );
         }
 
         # FIXME check for 255 char limit and split it up into
         # several records if apropriate
         when (/^txt$/i) {
-            $dns->push(
-                update => Net::DNS::RR->new(
+            return Net::DNS::RR->new(
                     name => (
                           $rr->{name}
-                        ? $rr->{name} . '.' . ($dns->question)[0]->qname
-                        : ($dns->question)[0]->qname
+                        ? $rr->{name} . '.' . $domain
+                        : $domain
                     ),
                     class   => 'IN',
-                    ttl     => $rr->{ttl},
+                    ttl     => $rr->{ttl} || 3600,
                     type    => $rr->{type},
                     txtdata => $rr->{value},
-                ));
+                );
+        }
+        when (/^ns$/i) {
+            return Net::DNS::RR->new(
+                    name => (
+                          $rr->{name}
+                        ? $rr->{name} . '.' . $domain
+                        : $domain
+                    ),
+                    class   => 'IN',
+                    ttl     => $rr->{ttl} || 14400,
+                    type    => $rr->{type},
+                    nsdname => $rr->{value},
+                );
+        }
+        when (/^soa$/i) {
+            return Net::DNS::RR->new(
+                    name => (
+                          $rr->{name}
+                        ? $rr->{name} . '.' . $domain
+                        : $domain
+                    ),
+                    mname   => $rr->{ns}->[0],
+                    rname   => $rr->{email},
+                    retry   => $rr->{retry},
+                    refresh => $rr->{refresh},
+                    expire  => $rr->{expire},
+                    minimum => $rr->{ttl},
+                    nsdname => $rr->{value},
+                    type    => $rr->{type},
+                );
         }
     }
-    return $dns;
 }
 
 =head2 from_net_dns

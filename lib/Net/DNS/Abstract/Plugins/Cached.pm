@@ -33,7 +33,7 @@ Query a DNS zone from the Cache
 =cut
 
 sub status_zone {
-    my ($self, $domain) = @_;
+    my ($self, $domain, $ns) = @_;
 
     my $truth = $self->truth->get_true_truth($domain);
     my $dns = $self->to_net_dns($truth->{dns});
