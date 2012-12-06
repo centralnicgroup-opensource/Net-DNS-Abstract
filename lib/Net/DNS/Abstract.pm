@@ -109,83 +109,7 @@ sub to_net_dns {
 
     # convert RR section
     foreach my $rr (@{ $zone->{rr} }) {
-        given ($rr->{type}) {
-            when (/^a{1,4}$/i) {
-                $dns->push(
-                    update => Net::DNS::RR->new(
-                        name => (
-                              $rr->{name}
-                            ? $rr->{name} . '.' . $zone->{domain}
-                            : $zone->{domain}
-                        ),
-                        class   => 'IN',
-                        ttl     => $rr->{ttl},
-                        type    => $rr->{type},
-                        address => $rr->{value},
-                    ));
-            }
-            when (/^cname$/i) {
-                $dns->push(
-                    update => Net::DNS::RR->new(
-                        name => (
-                              $rr->{name}
-                            ? $rr->{name} . '.' . $zone->{domain}
-                            : $zone->{domain}
-                        ),
-                        class => 'IN',
-                        ttl   => $rr->{ttl},
-                        type  => $rr->{type},
-                        cname => $rr->{value},
-                    ));
-            }
-            when (/^mx$/i) {
-                $dns->push(
-                    update => Net::DNS::RR->new(
-                        name => (
-                              $rr->{name}
-                            ? $rr->{name} . '.' . $zone->{domain}
-                            : $zone->{domain}
-                        ),
-                        class    => 'IN',
-                        ttl      => $rr->{ttl},
-                        type     => $rr->{type},
-                        exchange => $rr->{value},
-                        prio     => $rr->{prio},
-                    ));
-            }
-            when (/^srv$/i) {
-                my ($weight, $port, $target) = split(/\s/, $rr->{value}, 3);
-                $dns->push(
-                    update => Net::DNS::RR->new(
-                        name => (
-                              $rr->{name}
-                            ? $rr->{name} . '.' . $zone->{domain}
-                            : $zone->{domain}
-                        ),
-                        class  => 'IN',
-                        ttl    => $rr->{ttl},
-                        type   => $rr->{type},
-                        target => $target,
-                        weight => $weight,
-                        port   => $port,
-                        prio   => $rr->{prio},
-                    ));
-            }
-            when (/^txt$/i) {
-                $dns->push(
-                    update => Net::DNS::RR->new(
-                        name => (
-                              $rr->{name}
-                            ? $rr->{name} . '.' . $zone->{domain}
-                            : $zone->{domain}
-                        ),
-                        class   => 'IN',
-                        ttl     => $rr->{ttl},
-                        type    => $rr->{type},
-                        txtdata => $rr->{value},
-                    ));
-            }
-        }
+        $self->add_rr($dns, $rr);
     }
 
     # convert NS section
@@ -204,6 +128,99 @@ sub to_net_dns {
     return $dns;
 }
 
+=head2 add_rr
+
+Adds a RR hash to a Net::DNS object. Also converts our standardized hash
+into a Net::DNS::RR object.
+
+=cut
+
+sub add_rr {
+    my ($self, $dns, $rr) = @_;
+
+    given ($rr->{type}) {
+        when (/^a{1,4}$/i) {
+            $dns->push(
+                update => Net::DNS::RR->new(
+                    name => (
+                          $rr->{name}
+                        ? $rr->{name} . '.' . ($dns->question)[0]->qname
+                        : ($dns->question)[0]->qname
+                    ),
+                    class   => 'IN',
+                    ttl     => $rr->{ttl},
+                    type    => $rr->{type},
+                    address => $rr->{value},
+                ));
+        }
+        when (/^cname$/i) {
+            $dns->push(
+                update => Net::DNS::RR->new(
+                    name => (
+                          $rr->{name}
+                        ? $rr->{name} . '.' . ($dns->question)[0]->qname
+                        : ($dns->question)[0]->qname
+                    ),
+                    class => 'IN',
+                    ttl   => $rr->{ttl},
+                    type  => $rr->{type},
+                    cname => $rr->{value},
+                ));
+        }
+        when (/^mx$/i) {
+            $dns->push(
+                update => Net::DNS::RR->new(
+                    name => (
+                          $rr->{name}
+                        ? $rr->{name} . '.' . ($dns->question)[0]->qname
+                        : ($dns->question)[0]->qname
+                    ),
+                    class    => 'IN',
+                    ttl      => $rr->{ttl},
+                    type     => $rr->{type},
+                    exchange => $rr->{value},
+                    prio     => $rr->{prio},
+                ));
+        }
+        when (/^srv$/i) {
+            my ($weight, $port, $target) = split(/\s/, $rr->{value}, 3);
+            $dns->push(
+                update => Net::DNS::RR->new(
+                    name => (
+                          $rr->{name}
+                        ? $rr->{name} . '.' . ($dns->question)[0]->qname
+                        : ($dns->question)[0]->qname
+                    ),
+                    class  => 'IN',
+                    ttl    => $rr->{ttl},
+                    type   => $rr->{type},
+                    target => $target,
+                    weight => $weight,
+                    port   => $port,
+                    prio   => $rr->{prio},
+                ));
+        }
+
+        # FIXME check for 255 char limit and split it up into
+        # several records if apropriate
+        when (/^txt$/i) {
+            $dns->push(
+                update => Net::DNS::RR->new(
+                    name => (
+                          $rr->{name}
+                        ? $rr->{name} . '.' . ($dns->question)[0]->qname
+                        : ($dns->question)[0]->qname
+                    ),
+                    class   => 'IN',
+                    ttl     => $rr->{ttl},
+                    type    => $rr->{type},
+                    txtdata => $rr->{value},
+                ));
+        }
+    }
+    return $dns;
+}
+
 =head2 from_net_dns
 
 Convert a Net::DNS object into our normalized format
@@ -214,81 +231,72 @@ sub from_net_dns {
     my ($self, $dns) = @_;
 
     my $zone;
-    my $domain;    # FIXME possible race condition!!
+    print Dumper($zone) if $self->debug;
+    my $domain = ($dns->question)[0]->qname;
     foreach my $rr (@{ $dns->{authority} }) {
         given ($rr->type) {
             my $name = $rr->name;
             $name =~ s/\.?$domain$//;
             when ('SOA') {
                 $zone->{soa} = {
-                    'retry'       => $rr->retry,
-                        'email'   => $rr->rname,
-                        'refresh' => $rr->refresh,
-                        'ttl'     => $rr->ttl,
-                        'expire'  => $rr->expire,
+                    'retry'   => $rr->retry,
+                    'email'   => $rr->rname,
+                    'refresh' => $rr->refresh,
+                    'ttl'     => $rr->ttl,
+                    'expire'  => $rr->expire,
                 };
                 $zone->{domain} = $rr->name;
-                $domain = $rr->name;
             }
             when ('NS') {
-                push(
-                    @{ $zone->{ns} },
-                    {
-                        name => $rr->nsdname
-                    });
+                push(@{ $zone->{ns} }, { name => $rr->nsdname });
             }
             when (/^A{1,4}$/) {
                 push(
-                    @{ $zone->{rr} },
-                    {
+                    @{ $zone->{rr} }, {
                         name => $name || undef,
-                            ttl   => $rr->ttl,
-                            type  => $rr->type,
-                            value => $rr->address,
+                        ttl  => $rr->ttl,
+                        type => $rr->type,
+                        value => $rr->address,
                     });
             }
             when ('CNAME') {
                 push(
-                    @{ $zone->{rr} },
-                    {
+                    @{ $zone->{rr} }, {
                         name => $name || undef,
-                            ttl   => $rr->ttl,
-                            type  => $rr->type,
-                            value => $rr->cname,
+                        ttl  => $rr->ttl,
+                        type => $rr->type,
+                        value => $rr->cname,
                     });
             }
             when ('MX') {
                 push(
-                    @{ $zone->{rr} },
-                    {
+                    @{ $zone->{rr} }, {
                         name => $name || undef,
-                            ttl   => $rr->ttl,
-                            type  => $rr->type,
-                            prio  => $rr->prio,
-                            value => $rr->exchange,
+                        ttl  => $rr->ttl,
+                        type => $rr->type,
+                        prio => $rr->prio,
+                        value => $rr->exchange,
                     });
             }
             when ('SRV') {
                 push(
-                    @{ $zone->{rr} },
-                    {
+                    @{ $zone->{rr} }, {
                         name => $name || undef,
-                            ttl   => $rr->ttl,
-                            type  => $rr->type,
-                            prio  => $rr->prio,
-                            value => $rr->weight . ' '
+                        ttl  => $rr->ttl,
+                        type => $rr->type,
+                        prio => $rr->prio,
+                        value => $rr->weight . ' '
                             . $rr->port . ' '
                             . $rr->target,
                     });
             }
             when ('TXT') {
                 push(
-                    @{ $zone->{rr} },
-                    {
+                    @{ $zone->{rr} }, {
                         name => $name || undef,
-                            ttl   => $rr->ttl,
-                            type  => $rr->type,
-                            value => $rr->txtdata,
+                        ttl  => $rr->ttl,
+                        type => $rr->type,
+                        value => $rr->txtdata,
                     });
             }
         }

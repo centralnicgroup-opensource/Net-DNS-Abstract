@@ -41,7 +41,6 @@ sub status_zone {
     return $dns;
 }
 
-
 =head2 update_zone
 
 Update a DNS zone in the Cache
