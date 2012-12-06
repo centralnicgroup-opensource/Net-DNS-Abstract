@@ -19,4 +19,7 @@ my $query = {
 };
 
 my $res = $dns->axfr($query);
-print Dumper($res);
+#print Dumper($res);
+
+say "\n###### Got Answer for lnz.me ########";
+say $dns->to_string($res);

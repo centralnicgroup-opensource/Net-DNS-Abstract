@@ -280,7 +280,7 @@ sub from_net_dns {
     my ($self, $dns) = @_;
 
     my $zone;
-    print Dumper($zone) if $self->debug;
+    #print Dumper($zone) if $self->debug;
     my $domain = ($dns->question)[0]->qname;
     foreach my $rr (@{ $dns->{authority} }) {
         given ($rr->type) {
