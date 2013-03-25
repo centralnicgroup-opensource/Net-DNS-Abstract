@@ -12,7 +12,7 @@ has 'ix_ref' => (
     lazy    => 1,
 );
 
-=head2 register
+=head2 provides
 
 Register in the Net::DNS dispatch table for backend calls
 
@@ -21,20 +21,37 @@ Register in the Net::DNS dispatch table for backend calls
 sub provides {
     my ($self) = @_;
 
-    return { InternetX => { axfr => \&status_zone } };
+    return {
+        InternetX => { axfr => \&ix_status_zone, update => \&ix_update_zone } };
 }
 
-=head2 status_zone
+=head2 ix_status_zone
 
 Query a DNS zone via InternetX
 
 =cut
 
-sub status_zone {
+sub ix_status_zone {
     my ($self, $domain, $ns) = @_;
 
-    my $res = $self->ix_ref->ask($domain, $ns);
-    my $zone = $self->_parse_ix($res->{data}->{zone});
+    my $hash = {
+        command => 'status_zone',
+        options => { domain => $domain, ns => $ns, interface => 'internetx' },
+    };
+    my $res = $self->ix_ref->ask($hash);
+    my $zone = $self->_parse_ix($res->{data}->{zone} || $res);
+    return $zone;
+}
+
+=head2 ix_update_zone
+
+Update InternetX based on a Net::DNS update object
+
+=cut
+
+sub ix_update_zone {
+    my ($self, $update) = @_;
+
     return $zone;
 }
 
@@ -48,21 +65,29 @@ return a Net::DNS object.
 sub _parse_ix {
     my ($self, $zone) = @_;
 
-    #return { error => $zone } unless $zone->{code} eq 'S0205';
+    given ($zone->{code}) {
+        when (/^N/) { $zone->{status} = 'pending' }
+        when (/^S/) { $zone->{status} = 'success' }
+        when (/^E/) { $zone->{status} = 'error' }
+    }
+
+    # TODO this should be error handling as Net::DNS expects it!
+    return { error => $zone } unless $zone->{status} eq 'success';
+
     my $domain = $zone->{name}->{content};
     my $packet = new Net::DNS::Packet($domain, 'AXFR');
 
     $packet->push(
         answer => new Net::DNS::RR(
-                name    => $domain,
-                mname   => $zone->{nserver}->[0]->{name}->{content},
-                rname   => $zone->{soa}->{email}->{content},
-                retry   => $zone->{soa}->{retry}->{content},
-                refresh => $zone->{soa}->{refresh}->{content},
-                expire  => $zone->{soa}->{expire}->{content},
-                minimum => $zone->{soa}->{ttl}->{content},
-                type    => 'SOA',
-            ));
+            name    => $domain,
+            mname   => $zone->{nserver}->[0]->{name}->{content},
+            rname   => $zone->{soa}->{email}->{content},
+            retry   => $zone->{soa}->{retry}->{content},
+            refresh => $zone->{soa}->{refresh}->{content},
+            expire  => $zone->{soa}->{expire}->{content},
+            minimum => $zone->{soa}->{ttl}->{content},
+            type    => 'SOA',
+        ));
 
     if (ref $zone->{rr} eq 'ARRAY') {
         foreach my $rr (@{ $zone->{rr} }) {
@@ -111,6 +136,7 @@ sub _parse_ix {
                 $domain
             ));
     }
+
     # TODO check if we still want to convert old www_include records or
     # not
     #if ($zone->{www_include} && ($zone->{www_include}->{content} == 1)) {
