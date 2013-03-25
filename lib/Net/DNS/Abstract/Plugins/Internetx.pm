@@ -1,4 +1,4 @@
-package Net::DNS::Abstract::Plugins::InternetX;
+package Net::DNS::Abstract::Plugins::Internetx;
 
 use 5.010;
 use Any::Moose;
@@ -6,9 +6,9 @@ use Net::DNS;
 
 extends 'Net::DNS::Abstract';
 
-has 'ix_ref' => (
+has 'ix_transport' => (
     is      => 'rw',
-    default => sub { Net::DNS::Abstract::Plugins::InternetX::Direct->new() },
+    default => sub { Net::DNS::Abstract::Plugins::Daemonise->new() },
     lazy    => 1,
 );
 
@@ -22,7 +22,7 @@ sub provides {
     my ($self) = @_;
 
     return {
-        InternetX => { axfr => \&ix_status_zone, update => \&ix_update_zone } };
+        internetx => { axfr => \&ix_status_zone, update => \&ix_update_zone } };
 }
 
 =head2 ix_status_zone
@@ -38,7 +38,7 @@ sub ix_status_zone {
         command => 'status_zone',
         options => { domain => $domain, ns => $ns, interface => 'internetx' },
     };
-    my $res = $self->ix_ref->ask($hash);
+    my $res = $self->ix_transport->ask($hash);
     my $zone = $self->_parse_ix($res->{data}->{zone} || $res);
     return $zone;
 }

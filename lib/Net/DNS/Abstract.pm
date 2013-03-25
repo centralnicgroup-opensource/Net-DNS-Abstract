@@ -375,6 +375,7 @@ Loads a Plugin for Net::DNS::Abstract
 sub load_plugin {
     my ($self, $plugin) = @_;
 
+    $plugin = ucfirst($plugin);
     my $module = 'Net::DNS::Abstract::Plugins::' . $plugin;
     load $module;
     my $new_mod = $module->new();
