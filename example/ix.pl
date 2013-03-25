@@ -13,7 +13,7 @@ $ix_ref->ix_login({ user => '12IDN', pass => 'ce549B8e5i', context => 4 });
 my $dns = Net::DNS::Abstract->new(debug => 1);
 my $query = {
     domain    => 'lnz.me',
-    interface => 'InternetX',
+    interface => 'internetx',
     ns        => [ 'ns1.iwantmyname.net', 'ns2.iwantmynme.net' ],
     ix_ref    => $ix_ref,
 };
