@@ -7,6 +7,11 @@ license  'perl';
 
 build_requires 'Test::More';
 
+requires 'Net::DNS';
+requires 'Any::Moose';
+requires 'Module::Load';
+requires 'True::Truth';
+
 auto_install;
 
 WriteAll;
