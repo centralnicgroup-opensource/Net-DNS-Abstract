@@ -3,6 +3,7 @@ package Net::DNS::Abstract::Plugins::Internetx;
 use 5.010;
 use Any::Moose;
 use Net::DNS;
+use Net::DNS::Abstract::Plugins::Daemonise;
 
 extends 'Net::DNS::Abstract';
 
@@ -39,7 +40,7 @@ sub ix_status_zone {
         options => { domain => $domain, ns => $ns, interface => 'internetx' },
     };
     my $res = $self->ix_transport->ask($hash);
-    my $zone = $self->_parse_ix($res->{data}->{zone} || $res);
+    my $zone = $self->_parse_ix($res->{response} || $res);
     return $zone;
 }
 
@@ -52,7 +53,7 @@ Update InternetX based on a Net::DNS update object
 sub ix_update_zone {
     my ($self, $update) = @_;
 
-    return $zone;
+    #return $zone;
 }
 
 =head2 _parse_ix
@@ -63,16 +64,17 @@ return a Net::DNS object.
 =cut
 
 sub _parse_ix {
-    my ($self, $zone) = @_;
+    my ($self, $data) = @_;
 
-    given ($zone->{code}) {
-        when (/^N/) { $zone->{status} = 'pending' }
-        when (/^S/) { $zone->{status} = 'success' }
-        when (/^E/) { $zone->{status} = 'error' }
+    my $zone = $data->{data}->{zone};
+    given ($data->{code}) {
+        when (/^N/) { $data->{status} = 'pending' }
+        when (/^S/) { $data->{status} = 'success' }
+        when (/^E/) { $data->{status} = 'error' }
     }
 
     # TODO this should be error handling as Net::DNS expects it!
-    return { error => $zone } unless $zone->{status} eq 'success';
+    return { error => $data } unless $data->{status} eq 'success';
 
     my $domain = $zone->{name}->{content};
     my $packet = new Net::DNS::Packet($domain, 'AXFR');
@@ -168,6 +170,13 @@ sub _parse_ix {
             ));
     }
     return $packet;
+}
+
+sub internetx_transport {
+    my ($self, $d) = @_;
+
+    $self->ix_transport(Net::DNS::Abstract::Plugins::Daemonise->new({daemonise => $d}));
+    $self->ix_transport->debug($self->debug);
 }
 
 __PACKAGE__->meta->make_immutable();
