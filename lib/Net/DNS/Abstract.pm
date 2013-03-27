@@ -283,7 +283,8 @@ sub from_net_dns {
     my $zone;
     #print Dumper($zone) if $self->debug;
     my $domain = ($dns->question)[0]->qname;
-    foreach my $rr (@{ $dns->{authority} }) {
+    my $hash = ($dns->{authority}->[0] ? $dns->{authority} : $dns->{answer});
+    foreach my $rr (@{ $hash }) {
         given ($rr->type) {
             my $name = $rr->name;
             $name =~ s/\.?$domain$//;
