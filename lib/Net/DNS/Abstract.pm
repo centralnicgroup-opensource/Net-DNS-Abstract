@@ -33,6 +33,12 @@ has 'registry' => (
     default => sub { {} },
 );
 
+has 'platform' => (
+    is      => 'rw',
+    isa     => 'Str',
+    default => sub { 'iwmn' },
+);
+
 =head1 SYNOPSIS
 
 Net::DNS is the de-facto standard and battle tested perl DNS
@@ -59,12 +65,7 @@ we need a backend identifyer that we have a API plugin for.
 sub axfr {
     my ($self, $params) = @_;
 
-    my $plugin = $self->load_plugin($params->{interface});
-    foreach my $key (keys %{$params}){
-        next unless $key =~ m{ref};
-        eval{$plugin->$key($params->{$key})};
-        warn $@ if $@;
-    }
+    my $plugin = $self->load_plugin($params->{interface}, $params);
     my $ref = $self->registry->{ $params->{interface} }->{axfr};
 
     my $zone = $plugin->$ref($params->{domain}, $params->{ns});
@@ -373,13 +374,17 @@ Loads a Plugin for Net::DNS::Abstract
 =cut
 
 sub load_plugin {
-    my ($self, $plugin) = @_;
+    my ($self, $plugin, $params) = @_;
 
-    $plugin = ucfirst($plugin);
-    my $module = 'Net::DNS::Abstract::Plugins::' . $plugin;
+    my $module = 'Net::DNS::Abstract::Plugins::' . ucfirst($plugin);
     load $module;
     my $new_mod = $module->new();
     $self->register($new_mod->provides());
+    foreach my $key (keys %{$params}){
+        next unless $key =~ m{$plugin};
+        eval{$new_mod->$key($params->{$key})};
+        warn $@ if $@;
+    }
     print Dumper("load", $self->registry)
         if $self->debug();
     return $new_mod;
