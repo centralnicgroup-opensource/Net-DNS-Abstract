@@ -5,6 +5,7 @@ use Any::Moose;
 use Module::Load;
 use Net::DNS;
 use Net::DNS::Packet;
+use Net::DNS::ZoneFile;
 use Carp;
 use Data::Dumper;
 
@@ -81,13 +82,16 @@ process it.
 =cut
 
 sub update {
-    my ($self, $dns, $interface) = @_;
-    carp "No Plugin defined" unless $interface;
+    my ($self, $params) = @_;
 
-    my $plugin = $self->load_plugin($interface);
-    my $ref    = $self->registry->{$interface}->{update};
+    if(ref $params->{zone} ne 'HASH'){
+        $params->{zone} = Net::DNS::ZoneFile->parse( $params->{zone} );
+    }
 
-    my $zone = $plugin->$ref($dns);
+    my $plugin = $self->load_plugin($params->{interface}, $params);
+    my $ref = $self->registry->{ $params->{interface} }->{update};
+
+    my $zone = $plugin->$ref($params->{zone});
     return $zone;
 }
 
@@ -281,10 +285,12 @@ sub from_net_dns {
     my ($self, $dns) = @_;
 
     my $zone;
-    #print Dumper($zone) if $self->debug;
-    my $domain = ($dns->question)[0]->qname;
-    my $hash = ($dns->{authority}->[0] ? $dns->{authority} : $dns->{answer});
-    foreach my $rr (@{ $hash }) {
+    print Dumper($dns) if $self->debug;
+    #my $domain = ($dns->question)[0]->qname;
+    my $domain = 'domain.tld';
+    #my $hash = ($dns->{authority}->[0] ? $dns->{authority} : $dns->{answer});
+
+    foreach my $rr (@{ $dns }) {
         given ($rr->type) {
             my $name = $rr->name;
             $name =~ s/\.?$domain$//;
@@ -325,7 +331,7 @@ sub from_net_dns {
                         name => $name || undef,
                         ttl  => $rr->ttl,
                         type => $rr->type,
-                        prio => $rr->prio,
+                        prio => $rr->preference,
                         value => $rr->exchange,
                     });
             }
@@ -335,7 +341,7 @@ sub from_net_dns {
                         name => $name || undef,
                         ttl  => $rr->ttl,
                         type => $rr->type,
-                        prio => $rr->prio,
+                        prio => $rr->preference,
                         value => $rr->weight . ' '
                             . $rr->port . ' '
                             . $rr->target,
