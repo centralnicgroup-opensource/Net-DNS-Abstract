@@ -53,7 +53,15 @@ Update InternetX based on a Net::DNS update object
 sub ix_update_zone {
     my ($self, $update) = @_;
 
-    #return $zone;
+    my $hash = {
+        command => 'update_zone',
+        options => $self->from_net_dns($update),
+    };
+    $hash->{options}->{interface} = 'internetx';
+    my $res = $self->ix_transport->ask($hash);
+    my $zone = $self->_parse_ix($res->{response} || $res);
+
+    return $zone;
 }
 
 =head2 _parse_ix
@@ -75,6 +83,7 @@ sub _parse_ix {
 
     # TODO this should be error handling as Net::DNS expects it!
     return { error => $data } unless $data->{status} eq 'success';
+    return $data unless $zone;
 
     my $domain = $zone->{name}->{content};
     my $packet = new Net::DNS::Packet($domain, 'AXFR');
