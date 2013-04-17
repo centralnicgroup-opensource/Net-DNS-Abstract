@@ -91,7 +91,7 @@ sub update {
     my $plugin = $self->load_plugin($params->{interface}, $params);
     my $ref = $self->registry->{ $params->{interface} }->{update};
 
-    my $zone = $plugin->$ref($params->{zone});
+    my $zone = $plugin->$ref($params);
     return $zone;
 }
 
@@ -282,15 +282,22 @@ Convert a Net::DNS object into our normalized format
 =cut
 
 sub from_net_dns {
-    my ($self, $dns) = @_;
+    my ($self, $dns, $domain) = @_;
 
     my $zone;
-    print Dumper($dns) if $self->debug;
-    #my $domain = ($dns->question)[0]->qname;
-    my $domain = 'domain.tld';
-    #my $hash = ($dns->{authority}->[0] ? $dns->{authority} : $dns->{answer});
+    print Dumper("DNS: ", $dns) if $self->debug;
+    eval($domain = ($dns->question)[0]->qname);
+    print STDERR "DOMAIN: >>$domain<<\n";
+    my $hash;
+    if(ref $dns eq 'ARRAY'){
+        $hash = $dns;
+    } elsif(ref $dns eq 'HASH' && exists $dns->{zone}) {
+        $hash = $dns->{zone};
+    } else {
+        $hash = ($dns->{authority}->[0] ? $dns->{authority} : $dns->{answer});
+    }
 
-    foreach my $rr (@{ $dns }) {
+    foreach my $rr (@{ $hash }) {
         given ($rr->type) {
             my $name = $rr->name;
             $name =~ s/\.?$domain$//;
@@ -303,6 +310,7 @@ sub from_net_dns {
                     'expire'  => $rr->expire,
                 };
                 $zone->{domain} = $rr->name;
+                $domain = $zone->{domain};
             }
             when ('NS') {
                 push(@{ $zone->{ns} }, { name => $rr->nsdname });

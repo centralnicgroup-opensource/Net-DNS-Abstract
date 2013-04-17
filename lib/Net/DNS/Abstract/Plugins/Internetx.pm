@@ -4,6 +4,7 @@ use 5.010;
 use Any::Moose;
 use Net::DNS;
 use Net::DNS::Abstract::Plugins::Daemonise;
+use Data::Dumper;
 
 extends 'Net::DNS::Abstract';
 
@@ -51,11 +52,12 @@ Update InternetX based on a Net::DNS update object
 =cut
 
 sub ix_update_zone {
-    my ($self, $update) = @_;
+    my ($self, $update, $bla) = @_;
 
+    print Dumper("UPDATE:", $update, $bla);
     my $hash = {
         command => 'update_zone',
-        options => $self->from_net_dns($update),
+        options => $self->from_net_dns($update->{zone}, $update->{domain}),
     };
     $hash->{options}->{interface} = 'internetx';
     my $res = $self->ix_transport->ask($hash);
