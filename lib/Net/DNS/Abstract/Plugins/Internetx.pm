@@ -24,7 +24,12 @@ sub provides {
     my ($self) = @_;
 
     return {
-        internetx => { axfr => \&ix_status_zone, update => \&ix_update_zone } };
+        internetx => {
+            axfr   => \&ix_status_zone,
+            update => \&ix_update_zone,
+            create => \&ix_create_zone,
+            delete => \&ix_delete_zone,
+        } };
 }
 
 =head2 ix_status_zone
@@ -52,17 +57,55 @@ Update InternetX based on a Net::DNS update object
 =cut
 
 sub ix_update_zone {
-    my ($self, $update, $bla) = @_;
+    my ($self, $update) = @_;
 
-    print Dumper("UPDATE:", $update, $bla);
     my $hash = {
         command => 'update_zone',
+
+        # TODO figure out why $update->{domain} is not set but zone is
         options => $self->from_net_dns($update->{zone}, $update->{domain}),
     };
     $hash->{options}->{interface} = 'internetx';
     my $res = $self->ix_transport->ask($hash);
     my $zone = $self->_parse_ix($res->{response} || $res);
 
+    return $zone;
+}
+
+
+=head2 ix_create_zone
+
+Create a zone in the InternetX NS architecture
+
+=cut
+
+sub ix_create_zone {
+    my ($self, $domain, $ns) = @_;
+
+    my $hash = {
+        command => 'create_zone',
+        options => { domain => $domain, ns => $ns, interface => 'internetx' },
+    };
+    my $res = $self->ix_transport->ask($hash);
+    my $zone = $self->_parse_ix($res->{response} || $res);
+    return $zone;
+}
+
+=head2 ix_delete_zone
+
+Delete a zone in the InternetX NS architecture
+
+=cut
+
+sub ix_delete_zone {
+    my ($self, $domain, $ns) = @_;
+
+    my $hash = {
+        command => 'delete_zone',
+        options => { domain => $domain, ns => $ns, interface => 'internetx' },
+    };
+    my $res = $self->ix_transport->ask($hash);
+    my $zone = $self->_parse_ix($res->{response} || $res);
     return $zone;
 }
 
@@ -186,7 +229,8 @@ sub _parse_ix {
 sub internetx_transport {
     my ($self, $d) = @_;
 
-    $self->ix_transport(Net::DNS::Abstract::Plugins::Daemonise->new({daemonise => $d}));
+    $self->ix_transport(
+        Net::DNS::Abstract::Plugins::Daemonise->new({ daemonise => $d }));
     $self->ix_transport->debug($self->debug);
 }
 
