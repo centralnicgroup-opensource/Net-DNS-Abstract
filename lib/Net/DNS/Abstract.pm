@@ -95,6 +95,40 @@ sub update {
     return $zone;
 }
 
+
+=head2 create
+
+Create a new zone in a DNS backend
+
+=cut
+
+sub create {
+    my ($self, $params) = @_;
+
+    my $plugin = $self->load_plugin($params->{interface}, $params);
+    my $ref = $self->registry->{ $params->{interface} }->{create};
+
+    my $zone = $plugin->$ref($params->{domain}, $params->{ns});
+    return $zone;
+}
+
+
+=head2 delete
+
+Delete a zone from a DNS backend
+
+=cut
+
+sub delete {
+    my ($self, $params) = @_;
+
+    my $plugin = $self->load_plugin($params->{interface}, $params);
+    my $ref = $self->registry->{ $params->{interface} }->{delete};
+
+    my $zone = $plugin->$ref($params->{domain}, $params->{ns});
+    return $zone;
+}
+
 =head2 to_net_dns
 
 Converts a zone from our generic representation to Net::DNS format.
