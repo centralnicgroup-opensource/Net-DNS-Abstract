@@ -6,7 +6,7 @@ Net::DNS::Abstract - Net::DNS interface to several DNS backends via API
 
 =head1 VERSION
 
-version 0.2
+version 0.3
 
 =head1 SYNOPSIS
 
@@ -75,11 +75,11 @@ need for dispatching).
 
 =head1 AUTHOR
 
-Lenz Gschwendtner <lenz@springtimesoft.com>
+Lenz Gschwendtner <lenz@ideegeo.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2013 by springtimesoft LTD.
+This software is copyright (c) 2013 by ideegeo Group Limited.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
