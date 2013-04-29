@@ -1,9 +1,18 @@
 Changes
 lib/Net/DNS/Abstract.pm
+lib/Net/DNS/Abstract/Plugins/Cached.pm
+lib/Net/DNS/Abstract/Plugins/Daemonise.pm
+lib/Net/DNS/Abstract/Plugins/Hexonet.pm
+lib/Net/DNS/Abstract/Plugins/Internetx.pm
+lib/Net/DNS/Abstract/Plugins/InternetX/Direct.pm
 Makefile.PL
 MANIFEST			This list of files
+MANIFEST.SKIP
 README
+ignore.txt
 t/00-load.t
 t/manifest.t
 t/pod-coverage.t
 t/pod.t
+t/cached.t
+t/plugin_load.t
