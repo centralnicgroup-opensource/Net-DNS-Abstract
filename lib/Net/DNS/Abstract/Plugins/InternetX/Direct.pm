@@ -13,6 +13,8 @@ has 'ix_login' => (
     lazy    => 1,
 );
 
+# ABSTRACT: interface to InternetX via API::InternetX
+
 =head2 ask
 
 Ask IX directly via API::InternetX

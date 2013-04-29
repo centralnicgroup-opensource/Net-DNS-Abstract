@@ -5,6 +5,8 @@ use Any::Moose;
 
 extends 'Net::DNS::Abstract';
 
+# ABSTRACT: interface to Hexonet
+
 =head2 register
 
 Register in the Net::DNS dispatch table for backend calls

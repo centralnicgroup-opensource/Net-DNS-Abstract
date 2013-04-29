@@ -14,6 +14,8 @@ has 'truth' => (
     lazy    => 1,
 );
 
+# ABSTRACT: interface to True::Truth
+
 =head2 register
 
 Register in the Net::DNS dispatch table for backend calls

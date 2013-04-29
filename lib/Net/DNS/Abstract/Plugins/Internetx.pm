@@ -14,6 +14,8 @@ has 'ix_transport' => (
     lazy    => 1,
 );
 
+# ABSTRACT: wrapper interface for InternetX
+
 =head2 provides
 
 Register in the Net::DNS dispatch table for backend calls
