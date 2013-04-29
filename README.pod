@@ -1,0 +1,86 @@
+=pod
+
+=head1 NAME
+
+Net::DNS::Abstract - Net::DNS interface to several DNS backends via API
+
+=head1 VERSION
+
+version 0.2
+
+=head1 SYNOPSIS
+
+Net::DNS is the de-facto standard and battle tested perl DNS
+implementation. Unfortunately we don't intercat with DNS via DNS
+protocols but via 3rd party abstration layers that have all sorts of
+quirks. We try to provide one unified interface here.
+
+=head1 SUBROUTINES/METHODS
+
+=head2 axfr
+
+Do a zone transfer (actually poll a zone from a 3rd party provider) and
+return a list of Net::DNS::RR objects. Additional to a list of nameservers
+we need a backend identifyer that we have a API plugin for.
+
+    axfr({ 
+        domain => 'example.com', 
+        interface => 'InternetX', 
+        ns => ['ns1.provider.net']
+    })
+
+=head2 update
+
+Update a DNS zone via the respective backend plugin. This function takes
+a Net::DNS update object and pushes it through to the backend plugin to
+process it.
+
+=head2 create
+
+Create a new zone in a DNS backend
+
+=head2 delete
+
+Delete a zone from a DNS backend
+
+=head2 to_net_dns
+
+Converts a zone from our generic representation to Net::DNS format.
+
+=head2 add_rr
+
+Adds a RR hash to a Net::DNS object. Also converts our standardized hash
+into a Net::DNS::RR object.
+
+=head2 rr_from_hash
+
+Create a Net::DNS::RR object from a hash
+
+=head2 from_net_dns
+
+Convert a Net::DNS object into our normalized format
+
+=head2 to_string
+
+Stringify a Net::DNS object
+
+=head2 load_plugin
+
+Loads a Plugin for Net::DNS::Abstract
+
+=head2 register
+
+Registers a plugin in the internal registry (with all the callbacks we
+need for dispatching).
+
+=head1 AUTHOR
+
+Lenz Gschwendtner <lenz@springtimesoft.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2013 by springtimesoft LTD.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
