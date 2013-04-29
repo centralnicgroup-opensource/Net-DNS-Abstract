@@ -11,6 +11,8 @@ has 'daemonise' => (
     default => sub { },
 );
 
+# ABSTRACT: interface to Daemonise
+
 
 =head2 ask
 

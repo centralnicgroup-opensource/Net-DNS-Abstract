@@ -9,15 +9,7 @@ use Net::DNS::ZoneFile;
 use Carp;
 use Data::Dumper;
 
-=head1 NAME
-
-Net::DNS::Abstract - Net::DNS interface to several DNS backends via API
-
-=head1 VERSION
-
-Version 0.1.1.1.1.01
-
-=cut
+# ABSTRACT: Net::DNS interface to several DNS backends via API
 
 our $VERSION = '0.1';
 
@@ -454,61 +446,5 @@ sub register {
     }
     return;
 }
-
-=head1 AUTHOR
-
-Lenz Gschwendtner, C<< <norbu09 at cpan.org> >>
-
-=head1 BUGS
-
-Please report any bugs or feature requests to C<bug-net-dns-abstract at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Net-DNS-Abstract>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
-
-=head1 SUPPORT
-
-You can find documentation for this module with the perldoc command.
-
-    perldoc Net::DNS::Abstract
-
-
-You can also look for information at:
-
-=over 4
-
-=item * RT: CPAN's request tracker (report bugs here)
-
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Net-DNS-Abstract>
-
-=item * AnnoCPAN: Annotated CPAN documentation
-
-L<http://annocpan.org/dist/Net-DNS-Abstract>
-
-=item * CPAN Ratings
-
-L<http://cpanratings.perl.org/d/Net-DNS-Abstract>
-
-=item * Search CPAN
-
-L<http://search.cpan.org/dist/Net-DNS-Abstract/>
-
-=back
-
-
-=head1 ACKNOWLEDGEMENTS
-
-
-=head1 LICENSE AND COPYRIGHT
-
-Copyright 2012 Lenz Gschwendtner.
-
-This program is free software; you can redistribute it and/or modify it
-under the terms of either: the GNU General Public License as published
-by the Free Software Foundation; or the Artistic License.
-
-See http://dev.perl.org/licenses/ for more information.
-
-
-=cut
 
 __PACKAGE__->meta->make_immutable();
