@@ -150,7 +150,7 @@ sub to_net_dns {
 
     # convert RR section
     foreach my $rr (@{ $zone->{rr} }) {
-        $self->add_rr_update($dns, $rr);
+        $self->add_rr_update($dns, $rr, $zone->{domain});
     }
 
     # convert NS section
@@ -177,10 +177,12 @@ into a Net::DNS::RR object.
 =cut
 
 sub add_rr_update {
-    my ($self, $dns, $rr) = @_;
+    my ($self, $dns, $rr, $domain) = @_;
+
+    print Dumper($rr, $dns) if $self->debug;
 
     return $dns->push(
-        update => $self->rr_from_hash($rr, ($dns->question)[0]->qname));
+        update => $self->rr_from_hash($rr, $domain));
 }
 
 =head2 rr_from_hash
@@ -312,7 +314,8 @@ sub from_net_dns {
 
     my $zone;
     print Dumper("DNS: ", $dns) if $self->debug;
-    eval($domain = ($dns->question)[0]->qname);
+    #eval($domain = ($dns->question)[0]->qname)
+    #    unless $domain;
     print STDERR "DOMAIN: >>$domain<<\n";
     my $hash;
     if(ref $dns eq 'ARRAY'){
