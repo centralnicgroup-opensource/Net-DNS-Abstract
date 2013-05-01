@@ -378,7 +378,7 @@ sub from_net_dns {
                         name => $name || undef,
                         ttl  => $rr->ttl,
                         type => $rr->type,
-                        prio => $rr->preference,
+                        prio => $rr->priority,
                         value => $rr->weight . ' '
                             . $rr->port . ' '
                             . $rr->target,
