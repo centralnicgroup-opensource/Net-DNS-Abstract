@@ -38,8 +38,8 @@ sub status_zone {
     my ($self, $domain, $ns) = @_;
 
     my $truth = $self->truth->get_true_truth($domain);
-    my $dns = $self->to_net_dns($truth->{dns});
-    print $dns->string;
+    my $dns   = $self->to_net_dns($truth->{dns});
+    print __PACKAGE__ . ": " . $dns->string;
     return $dns;
 }
 
@@ -50,10 +50,10 @@ Update a DNS zone in the Cache
 =cut
 
 sub update_zone {
-    my($self, $dns) = @_;
+    my ($self, $dns) = @_;
 
     my $zone = $self->from_net_dns($dns);
-    print Dumper($zone);
+    print __PACKAGE__ . ": " . Dumper($zone);
     return $zone;
 }
 

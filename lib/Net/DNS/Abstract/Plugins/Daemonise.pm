@@ -13,7 +13,6 @@ has 'daemonise' => (
 
 # ABSTRACT: interface to Daemonise
 
-
 =head2 ask
 
 Generic interface to Daemoniser to push messages into a RabbitMQ
@@ -24,7 +23,7 @@ endpoint in a standardised way.
 sub ask {
     my ($self, $hash) = @_;
 
-    print STDERR Dumper($self->daemonise);
+    print STDERR __PACKAGE__ . ": " . Dumper($self->daemonise);
     if (!$hash->{options}->{interface}) {
         $self->daemonise->log("No Backend interface defined!");
         return;
