@@ -47,7 +47,7 @@ Delete a zone from a DNS backend
 
 Converts a zone from our generic representation to Net::DNS format.
 
-=head2 add_rr
+=head2 add_rr_update
 
 Adds a RR hash to a Net::DNS object. Also converts our standardized hash
 into a Net::DNS::RR object.

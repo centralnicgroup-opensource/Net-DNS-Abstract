@@ -16,7 +16,7 @@ has 'truth' => (
 
 # ABSTRACT: interface to True::Truth
 
-=head2 register
+=head2 provides
 
 Register in the Net::DNS dispatch table for backend calls
 
@@ -58,3 +58,5 @@ sub update_zone {
 }
 
 __PACKAGE__->meta->make_immutable();
+
+1;

@@ -109,7 +109,7 @@ Delete a zone from a DNS backend
 
 =cut
 
-sub delete {
+sub delete {    ## no critic (ProhibitBuiltinHomonyms)
     my ($self, $params) = @_;
 
     my $plugin = $self->load_plugin($params->{interface}, $params);
@@ -167,7 +167,7 @@ sub to_net_dns {
     return $dns;
 }
 
-=head2 add_rr
+=head2 add_rr_update
 
 Adds a RR hash to a Net::DNS object. Also converts our standardized hash
 into a Net::DNS::RR object.
@@ -299,6 +299,8 @@ sub rr_from_hash {
             );
         }
     }
+
+    return;
 }
 
 =head2 from_net_dns
@@ -457,3 +459,5 @@ sub register {
 }
 
 __PACKAGE__->meta->make_immutable();
+
+1;
