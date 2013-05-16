@@ -4,7 +4,6 @@ use 5.010;
 use Any::Moose;
 use Net::DNS;
 use Net::DNS::Abstract::Plugins::Daemonise;
-use Data::Dumper;
 
 extends 'Net::DNS::Abstract';
 
