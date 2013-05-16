@@ -2,7 +2,6 @@ package Net::DNS::Abstract::Plugins::Daemonise;
 
 use 5.010;
 use Any::Moose;
-use Data::Dumper;
 
 extends 'Net::DNS::Abstract';
 
@@ -23,7 +22,6 @@ endpoint in a standardised way.
 sub ask {
     my ($self, $hash) = @_;
 
-    print STDERR __PACKAGE__ . ": " . Dumper($self->daemonise);
     if (!$hash->{options}->{interface}) {
         $self->daemonise->log("No Backend interface defined!");
         return;
