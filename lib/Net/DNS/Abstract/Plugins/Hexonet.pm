@@ -7,7 +7,7 @@ extends 'Net::DNS::Abstract';
 
 # ABSTRACT: interface to Hexonet
 
-=head2 register
+=head2 provides
 
 Register in the Net::DNS dispatch table for backend calls
 
@@ -19,7 +19,6 @@ sub provides {
     return { Hexonet => { axfr => \&status_zone } };
 }
 
-
 =head2 status_zone
 
 Query a DNS zone via InternetX
@@ -27,13 +26,15 @@ Query a DNS zone via InternetX
 =cut
 
 sub status_zone {
-    my($self, $domain) = @_;
+    my ($self, $domain) = @_;
 
     my $zone = {
-        domain => $domain,   
+        domain    => $domain,
         interface => 'Hexonet',
     };
     return $zone;
 }
 
 __PACKAGE__->meta->make_immutable();
+
+1;

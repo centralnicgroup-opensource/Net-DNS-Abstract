@@ -73,7 +73,6 @@ sub ix_update_zone {
     return $zone;
 }
 
-
 =head2 ix_create_zone
 
 Create a zone in the InternetX NS architecture
@@ -132,10 +131,10 @@ sub _parse_ix {
     return $data unless $zone;
 
     my $domain = $zone->{name}->{content};
-    my $packet = new Net::DNS::Packet($domain, 'AXFR');
+    my $packet = Net::DNS::Packet->new($domain, 'AXFR');
 
     $packet->push(
-        answer => new Net::DNS::RR(
+        answer => Net::DNS::RR->new(
             name    => $domain,
             mname   => $zone->{nserver}->[0]->{name}->{content},
             rname   => $zone->{soa}->{email}->{content},
@@ -227,12 +226,20 @@ sub _parse_ix {
     return $packet;
 }
 
+=head2 internetx_transport
+
+=cut
+
 sub internetx_transport {
     my ($self, $d) = @_;
 
     $self->ix_transport(
         Net::DNS::Abstract::Plugins::Daemonise->new({ daemonise => $d }));
     $self->ix_transport->debug($self->debug);
+
+    return;
 }
 
 __PACKAGE__->meta->make_immutable();
+
+1;
