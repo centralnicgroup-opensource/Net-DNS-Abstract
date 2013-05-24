@@ -381,7 +381,6 @@ sub from_net_dns {
     my $domain = $self->domain;
 
     $self->log("from_net_dns(): DOMAIN: >> $domain <<");
-    $self->log("from_net_dns(): " . dump($self->zone));    #debug
 
     # my $hash;
     # if (ref $dns eq 'ARRAY') {
@@ -399,8 +398,6 @@ sub from_net_dns {
         ? $self->zone->authority
         : $self->zone->answer
     );
-
-    $self->log("from_net_dns(): " . dump(@rrs));    #debug
 
     my $zone;
     foreach my $rr (@rrs) {
