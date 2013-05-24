@@ -7,12 +7,26 @@ use Data::Dump 'dump';
 
 # ABSTRACT: interface to True::Truth
 
+=head1 SYNOPSIS
+
+Net::DNS::Abstract plugin to access zones in an internal cache using True::Truth
+
+=head1 ATTRIBUTES
+
+=head2 truth
+
+True::Truth object to handle persistent and volatile storage
+
+=cut
+
 has 'truth' => (
     is      => 'ro',
     isa     => 'True::Truth',
     default => sub { True::Truth->new() },
     lazy    => 1,
 );
+
+=head1 METHOD MODIFIERS
 
 =head2 axfr
 

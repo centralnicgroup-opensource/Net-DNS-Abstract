@@ -5,6 +5,19 @@ use Any::Moose 'Role';
 
 # ABSTRACT: interface to Daemonise
 
+=head1 SYNOPSIS
+
+Net::DNS::Abstract plugin to communicate with a Daemonise backend using RabbitMQ
+endpoint in a generalized way.
+
+=head1 ATTRIBUTES
+
+=head2 transport
+
+transport layer object, has to be a Daemonise object.
+
+=cut
+
 has 'transport' => (
     is       => 'rw',
     isa      => 'Daemonise',
@@ -12,6 +25,10 @@ has 'transport' => (
 );
 
 =head2 platform
+
+Daemonise platform variable
+
+default: iwmn
 
 =cut
 
@@ -21,7 +38,14 @@ has 'platform' => (
     default => sub { 'iwmn' },
 );
 
-# alias 'daemonise' to 'transport' for understandability
+=head1 SUBROUTINES/METHODS
+
+=head2 daemonise
+
+Alias to access 'transport' attribute for understandability
+
+=cut
+
 sub daemonise {
     my ($self) = @_;
     return $self->transport;

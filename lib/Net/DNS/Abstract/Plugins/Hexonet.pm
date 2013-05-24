@@ -5,6 +5,12 @@ use Any::Moose 'Role';
 
 # ABSTRACT: interface to Hexonet
 
+=head1 SYNOPSIS
+
+Net::DNS::Abstract plugin to manage DNS zones at Hexonet
+
+=head1 METHOD MODIFIERS
+
 =head2 axfr
 
 Query a DNS zone via Hexonet

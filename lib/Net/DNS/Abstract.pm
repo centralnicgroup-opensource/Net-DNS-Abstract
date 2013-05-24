@@ -382,17 +382,6 @@ sub from_net_dns {
 
     $self->log("from_net_dns(): DOMAIN: >> $domain <<");
 
-    # my $hash;
-    # if (ref $dns eq 'ARRAY') {
-    #     $hash = $dns;
-    # }
-    # elsif (ref $dns eq 'HASH' && exists $dns->{zone}) {
-    #     $hash = $dns->{zone};
-    # }
-    # else {
-    #     $hash = ($dns->{authority}->[0] ? $dns->{authority} : $dns->{answer});
-    # }
-
     my @rrs = (
           $self->zone->authority
         ? $self->zone->authority
@@ -484,7 +473,15 @@ sub from_net_dns {
     return $zone;
 }
 
-sub log {
+=head2 log
+
+print log message to STDERR including this module's name
+
+Returns: nothing
+
+=cut
+
+sub log {    ## no critic (ProhibitBuiltinHomonyms)
     my ($self, $msg) = @_;
 
     return unless (ref \$msg eq 'SCALAR');
