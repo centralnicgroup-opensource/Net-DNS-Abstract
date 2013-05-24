@@ -4,6 +4,7 @@
 .lwpcookies
 .shipit
 .vimbk
+.build
 Build
 Build.bat
 MANIFEST.SKIP
