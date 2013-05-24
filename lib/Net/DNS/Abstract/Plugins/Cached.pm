@@ -19,12 +19,25 @@ True::Truth object to handle persistent and volatile storage
 
 =cut
 
-has 'truth' => (
+has 'transport' => (
     is      => 'ro',
     isa     => 'True::Truth',
     default => sub { True::Truth->new() },
     lazy    => 1,
 );
+
+=head1 SUBROUTINES/METHODS
+
+=head2 truth
+
+Alias to access 'transport' attribute for understandability
+
+=cut
+
+sub truth {
+    my ($self) = @_;
+    return $self->transport;
+}
 
 =head1 METHOD MODIFIERS
 
