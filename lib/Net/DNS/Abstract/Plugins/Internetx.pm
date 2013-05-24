@@ -8,12 +8,26 @@ use Net::DNS;
 
 with 'Net::DNS::Abstract::Plugins::Daemonise';
 
-# Daemonise plugin has to implement ask()
+=head1 SYNOPSIS
+
+Net::DNS::Abstract plugin for talking to InternetX using a Daemonise object as
+transport layer
+
+=head1 REQUIRED METHODS
+
+=head2 ask
+
+Daemonise plugin has to implement ask()
+
+=cut
+
 requires 'ask';
+
+=head1 METHOD MODIFIERS
 
 =head2 axfr
 
-Query a DNS zone via InternetX
+Query a DNS zone at InternetX
 
 Returns: Net::DNS::Packet object or HASHREF of parsed IX answer on error
 

@@ -78,6 +78,12 @@ Convert a Net::DNS object into our normalized format
 
 Returns: our normalized format as HASHREF or undef on error
 
+=head2 log
+
+print log message to STDERR including this module's name
+
+Returns: nothing
+
 =head1 AUTHOR
 
 Lenz Gschwendtner <lenz@ideegeo.com>
