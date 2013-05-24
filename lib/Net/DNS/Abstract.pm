@@ -6,31 +6,11 @@ use Module::Load;
 use Net::DNS;
 use Net::DNS::Packet;
 use Net::DNS::ZoneFile;
-use Carp;
-use Data::Dumper;
+use Data::Dump 'dump';
 
 # ABSTRACT: Net::DNS interface to several DNS backends via API
 
-our $VERSION = '0.1';
-
-has 'debug' => (
-    is      => 'rw',
-    isa     => 'Bool',
-    default => 1,
-    lazy    => 1,
-);
-
-has 'registry' => (
-    is      => 'rw',
-    isa     => 'HashRef',
-    default => sub { {} },
-);
-
-has 'platform' => (
-    is      => 'rw',
-    isa     => 'Str',
-    default => sub { 'iwmn' },
-);
+# VERSION
 
 =head1 SYNOPSIS
 
@@ -39,31 +19,78 @@ implementation. Unfortunately we don't intercat with DNS via DNS
 protocols but via 3rd party abstration layers that have all sorts of
 quirks. We try to provide one unified interface here.
 
+=head1 ATTRIBUTES
+
+=head2 debug
+
+=cut
+
+has 'debug' => (
+    is      => 'rw',
+    isa     => 'Bool',
+    default => sub { 1 },
+    lazy    => 1,
+);
+
+=head2 domain
+
+the domain as a punycode string of the underlaying zone (required)
+
+=cut
+
+has 'domain' => (
+    is       => 'rw',
+    isa      => 'Str',
+    required => 1,
+);
+
+=head2 zone
+
+the Net::DNS::Packet object of the underlaying zone
+
+=cut
+
+has 'zone' => (
+    is      => 'rw',
+    isa     => 'Net::DNS::Packet',
+    default => sub { Net::DNS::Packet->new },
+);
+
+=head2 interface
+
+defines the interface plugin to load (required)
+
+=cut
+
+has 'interface' => (
+    is       => 'rw',
+    isa      => 'Str',
+    required => 1,
+);
+
+before 'new' => sub {
+    my ($class, %args) = @_;
+
+    return unless exists $args{interface};
+
+    my $module = 'Net::DNS::Abstract::Plugins::' . ucfirst($args{interface});
+    with $module;
+
+    print STDERR __PACKAGE__ . ": loaded plugin: $module\n";
+};
+
 =head1 SUBROUTINES/METHODS
 
 =head2 axfr
 
 Do a zone transfer (actually poll a zone from a 3rd party provider) and
-return a list of Net::DNS::RR objects. Additional to a list of nameservers
-we need a backend identifyer that we have a API plugin for.
+return a Net::DNS::Packet objects.
 
-    axfr({ 
-        domain => 'example.com', 
-        interface => 'InternetX', 
-        ns => ['ns1.provider.net']
-    })
+    axfr(['ns1.provider.net'])
 
 =cut
 
-sub axfr {
-    my ($self, $params) = @_;
-
-    my $plugin = $self->load_plugin($params->{interface}, $params);
-    my $ref = $self->registry->{ $params->{interface} }->{axfr};
-
-    my $zone = $plugin->$ref($params->{domain}, $params->{ns});
-    return $zone;
-}
+sub axfr { }
 
 =head2 update
 
@@ -74,17 +101,33 @@ process it.
 =cut
 
 sub update {
-    my ($self, $params) = @_;
+    my ($self, $zone) = @_;
 
-    if (ref $params->{zone} ne 'HASH') {
-        $params->{zone} = Net::DNS::ZoneFile->parse($params->{zone});
+    unless (defined $zone) {
+        $self->log('update(): missing "zone" parameter');
+        return;
     }
 
-    my $plugin = $self->load_plugin($params->{interface}, $params);
-    my $ref = $self->registry->{ $params->{interface} }->{update};
+    given (ref $zone) {
+        when ('HASH') {
+            $self->log('update(): zone has HASH format') if $self->debug;
+            $self->our_to_net_dns($zone);
+        }
+        when ('') {
+            $self->log('update(): zone is a Zonefile string') if $self->debug;
+            $self->zonefile_to_net_dns($zone);
+        }
+        when ('Net::DNS::Packet') {
+            $self->log('update(): zone is Net::DNS::Packet format')
+                if $self->debug;
+            $self->zone($zone);
+        }
+        default {
+            $self->log('update(): unknown zone format');
+        }
+    }
 
-    my $zone = $plugin->$ref($params);
-    return $zone;
+    return;
 }
 
 =head2 create
@@ -93,15 +136,7 @@ Create a new zone in a DNS backend
 
 =cut
 
-sub create {
-    my ($self, $params) = @_;
-
-    my $plugin = $self->load_plugin($params->{interface}, $params);
-    my $ref = $self->registry->{ $params->{interface} }->{create};
-
-    my $zone = $plugin->$ref($params->{domain}, $params->{ns});
-    return $zone;
-}
+sub create { }
 
 =head2 delete
 
@@ -109,194 +144,223 @@ Delete a zone from a DNS backend
 
 =cut
 
-sub delete {    ## no critic (ProhibitBuiltinHomonyms)
-    my ($self, $params) = @_;
+sub delete { }    ## no critic (ProhibitBuiltinHomonyms)
 
-    my $plugin = $self->load_plugin($params->{interface}, $params);
-    my $ref = $self->registry->{ $params->{interface} }->{delete};
+=head2 our_to_net_dns
 
-    my $zone = $plugin->$ref($params->{domain}, $params->{ns});
-    return $zone;
-}
+Converts a zone from our generic representation to Net::DNS::Packet format.
 
-=head2 to_net_dns
-
-Converts a zone from our generic representation to Net::DNS format.
+Returns: Net::DNS::Packet object representation of the zone or undef on error
 
 =cut
 
-sub to_net_dns {
+sub our_to_net_dns {
     my ($self, $zone) = @_;
 
-    my $dns = Net::DNS::Update->new($zone->{domain}, 'IN');
+    $self->log('to_net_dns(): ' . dump($zone)) if $self->debug;
 
-    print __PACKAGE__ . ": " . Dumper($zone) if $self->debug();
+    # create an empty zone
+    $self->zone(Net::DNS::Packet->new($self->domain, 'IN', 'SOA'));
 
     # TODO this SOA record needs cleanup and debugging!
-    $dns->push(
-        update => rr_add(
-                  $zone->{domain} . ' '
-                . $zone->{soa}->{ttl}
-                . ' IN SOA '
-                . $zone->{ns}->[0]->{name} . ' '
-                . $zone->{soa}->{email} . ' '
-                . time . ' '
-                . $zone->{soa}->{ttl} . ' '
-                . $zone->{soa}->{retry}
-                . $zone->{soa}->{expire} . ' '
-                . $zone->{soa}->{ttl}));
+    $self->add_rr(
+        update => {
+            type    => 'SOA',
+            name    => '',
+            serial  => time,
+            ns      => [ $zone->{ns}->[0]->{name} ],
+            email   => $zone->{soa}->{email},
+            retry   => $zone->{soa}->{retry},
+            expire  => $zone->{soa}->{expire},
+            refresh => $zone->{soa}->{refresh},
+            ttl     => $zone->{soa}->{ttl},
+        });
 
     # convert RR section
     foreach my $rr (@{ $zone->{rr} }) {
-        $self->add_rr_update($dns, $rr, $zone->{domain});
+        $self->add_rr(update => $rr);
     }
 
     # convert NS section
     foreach my $rr (@{ $zone->{ns} }) {
-        $dns->push(
-            update => Net::DNS::RR->new(
-                name    => $zone->{domain},
-                class   => 'IN',
-                type    => 'NS',
-                ttl     => $rr->{ttl} || 14400,
-                nsdname => $rr->{name},
-            ));
+        $self->add_rr(
+            update => {
+                type  => 'NS',
+                name  => '',
+                ttl   => $rr->{ttl} || 14400,
+                value => $rr->{name},
+            });
     }
 
-    print __PACKAGE__ . ": " . Dumper($dns) if $self->debug();
-    return $dns;
+    $self->log("to_net_dns(): DNS: " . dump($self->zone)) if $self->debug;
+
+    return $self->zone;
 }
 
-=head2 add_rr_update
+=head2 zonefile_to_net_dns
 
-Adds a RR hash to a Net::DNS object. Also converts our standardized hash
-into a Net::DNS::RR object.
+Converts a zone from a Zonefile string representation to Net::DNS::Packet format.
+
+Returns: Net::DNS::Packet object representation of the zone or undef on error
 
 =cut
 
-sub add_rr_update {
-    my ($self, $dns, $rr, $domain) = @_;
+sub zonefile_to_net_dns {
+    my ($self, $zonefile) = @_;
 
-    print __PACKAGE__ . ": " . Dumper($rr, $dns) if $self->debug;
+    $self->zone(Net::DNS::Packet->new($self->domain));
+    $self->zone->push(update => Net::DNS::ZoneFile->parse($zonefile));
 
-    return $dns->push(update => $self->rr_from_hash($rr, $domain));
+    return $self->zone;
 }
 
-=head2 rr_from_hash
+=head2 add_rr
 
-Create a Net::DNS::RR object from a hash
+Add a Net::DNS::RR object to the zone attribute
+
+Returns: true when successful, false otherwise
 
 =cut
 
-sub rr_from_hash {
-    my ($self, $rr, $domain) = @_;
+sub add_rr {
+    my ($self, $section, $rr) = @_;
 
-    print __PACKAGE__ . ": " . Dumper($rr, $domain) if $self->debug;
+    $self->log('add_arr(): ' . dump($section, $rr)) if $self->debug;
 
-    # TODO add SOA record support
+    return
+        unless $section =~
+            m/^(header|question|answer|pre|prereq|authority|update|additional)$/;
+
     given ($rr->{type}) {
-        when (/^a{1,4}$/i) {
-            return Net::DNS::RR->new(
-                name => (
-                      $rr->{name}
-                    ? $rr->{name} . '.' . $domain
-                    : $domain
-                ),
-                class   => 'IN',
-                ttl     => $rr->{ttl} || 3600,
-                type    => $rr->{type},
-                address => $rr->{value},
-            );
+        when (/^SOA$/i) {
+            $self->zone->push(
+                $section => Net::DNS::RR->new(
+                    name => (
+                          $rr->{name}
+                        ? $rr->{name} . '.' . $self->domain
+                        : $self->domain
+                    ),
+                    mname   => $rr->{ns}->[0],
+                    rname   => $rr->{email},
+                    serial  => $rr->{serial} || time,
+                    retry   => $rr->{retry},
+                    refresh => $rr->{refresh},
+                    expire  => $rr->{expire},
+                    minimum => $rr->{ttl},
+                    type    => $rr->{type},
+                ));
+            return 1;
         }
-        when (/^cname$/i) {
-            return Net::DNS::RR->new(
-                name => (
-                      $rr->{name}
-                    ? $rr->{name} . '.' . $domain
-                    : $domain
-                ),
-                class => 'IN',
-                ttl   => $rr->{ttl} || 3600,
-                type  => $rr->{type},
-                cname => $rr->{value},
-            );
+        when (/^A{1,4}$/i) {
+            $self->zone->push(
+                $section => Net::DNS::RR->new(
+                    name => (
+                          $rr->{name}
+                        ? $rr->{name} . '.' . $self->domain
+                        : $self->domain
+                    ),
+                    class   => 'IN',
+                    ttl     => $rr->{ttl} || 3600,
+                    type    => $rr->{type},
+                    address => $rr->{value},
+                ));
+            return 1;
         }
-        when (/^mx$/i) {
-            return Net::DNS::RR->new(
-                name => (
-                      $rr->{name}
-                    ? $rr->{name} . '.' . $domain
-                    : $domain
-                ),
-                class    => 'IN',
-                ttl      => $rr->{ttl} || 14400,
-                type     => $rr->{type},
-                exchange => $rr->{value},
-                prio     => $rr->{prio},
-            );
+        when (/^CNAME$/i) {
+            $self->zone->push(
+                $section => Net::DNS::RR->new(
+                    name => (
+                          $rr->{name}
+                        ? $rr->{name} . '.' . $self->domain
+                        : $self->domain
+                    ),
+                    class => 'IN',
+                    ttl   => $rr->{ttl} || 3600,
+                    type  => $rr->{type},
+                    cname => $rr->{value},
+                ));
+            return 1;
         }
-        when (/^srv$/i) {
+        when (/^MX$/i) {
+            $self->zone->push(
+                $section => Net::DNS::RR->new(
+                    name => (
+                          $rr->{name}
+                        ? $rr->{name} . '.' . $self->domain
+                        : $self->domain
+                    ),
+                    class    => 'IN',
+                    ttl      => $rr->{ttl} || 14400,
+                    type     => $rr->{type},
+                    exchange => $rr->{value},
+                    prio     => $rr->{prio},
+                ));
+            return 1;
+        }
+        when (/^SRV$/i) {
             my ($weight, $port, $target) = split(/\s/, $rr->{value}, 3);
-            return Net::DNS::RR->new(
-                name => (
-                      $rr->{name}
-                    ? $rr->{name} . '.' . $domain
-                    : $domain
-                ),
-                class  => 'IN',
-                ttl    => $rr->{ttl} || 14400,
-                type   => $rr->{type},
-                target => $target,
-                weight => $weight,
-                port   => $port,
-                prio   => $rr->{prio},
-            );
-        }
 
-        # FIXME check for 255 char limit and split it up into
-        # several records if apropriate
-        when (/^txt$/i) {
-            return Net::DNS::RR->new(
-                name => (
-                      $rr->{name}
-                    ? $rr->{name} . '.' . $domain
-                    : $domain
-                ),
-                class   => 'IN',
-                ttl     => $rr->{ttl} || 3600,
-                type    => $rr->{type},
-                txtdata => $rr->{value},
-            );
+            $self->zone->push(
+                $section => Net::DNS::RR->new(
+                    name => (
+                          $rr->{name}
+                        ? $rr->{name} . '.' . $self->domain
+                        : $self->domain
+                    ),
+                    class  => 'IN',
+                    ttl    => $rr->{ttl} || 14400,
+                    type   => $rr->{type},
+                    target => $target,
+                    weight => $weight,
+                    port   => $port,
+                    prio   => $rr->{prio},
+                ));
+            return 1;
         }
-        when (/^ns$/i) {
-            return Net::DNS::RR->new(
-                name => (
-                      $rr->{name}
-                    ? $rr->{name} . '.' . $domain
-                    : $domain
-                ),
-                class   => 'IN',
-                ttl     => $rr->{ttl} || 14400,
-                type    => $rr->{type},
-                nsdname => $rr->{value},
-            );
+        when (/^TXT$/i) {
+
+            # split too long TXT records into multiple records on word boundary
+            # limit: 255 chars
+            my @txts = $rr->{value} =~ /(.{1,255})\W/gms;
+
+            foreach my $txt (@txts) {
+                $self->zone->push(
+                    $section => Net::DNS::RR->new(
+                        name => (
+                              $rr->{name}
+                            ? $rr->{name} . '.' . $self->domain
+                            : $self->domain
+                        ),
+                        class   => 'IN',
+                        ttl     => $rr->{ttl} || 3600,
+                        type    => $rr->{type},
+                        txtdata => $txt,
+                    ));
+            }
+
+            return 1;
         }
-        when (/^soa$/i) {
-            return Net::DNS::RR->new(
-                name => (
-                      $rr->{name}
-                    ? $rr->{name} . '.' . $domain
-                    : $domain
-                ),
-                mname   => $rr->{ns}->[0],
-                rname   => $rr->{email},
-                retry   => $rr->{retry},
-                refresh => $rr->{refresh},
-                expire  => $rr->{expire},
-                minimum => $rr->{ttl},
-                nsdname => $rr->{value},
-                type    => $rr->{type},
-            );
+        when (/^NS$/i) {
+            $self->zone->push(
+                $section => Net::DNS::RR->new(
+                    name => (
+                          $rr->{name}
+                        ? $rr->{name} . '.' . $self->domain
+                        : $self->domain
+                    ),
+                    class   => 'IN',
+                    ttl     => $rr->{ttl} || 14400,
+                    type    => $rr->{type},
+                    nsdname => $rr->{value},
+                ));
+            return 1;
+        }
+        default {
+            $self->log('add_arr(): '
+                    . $self->domain
+                    . ": unsupported record type: "
+                    . $rr->{type});
+            return;
         }
     }
 
@@ -307,45 +371,65 @@ sub rr_from_hash {
 
 Convert a Net::DNS object into our normalized format
 
+Returns: our normalized format as HASHREF or undef on error
+
 =cut
 
 sub from_net_dns {
-    my ($self, $dns, $domain) = @_;
+    my ($self) = @_;
+
+    my $domain = $self->domain;
+
+    $self->log("from_net_dns(): DOMAIN: >> $domain <<");
+    $self->log("from_net_dns(): " . dump($self->zone));    #debug
+
+    # my $hash;
+    # if (ref $dns eq 'ARRAY') {
+    #     $hash = $dns;
+    # }
+    # elsif (ref $dns eq 'HASH' && exists $dns->{zone}) {
+    #     $hash = $dns->{zone};
+    # }
+    # else {
+    #     $hash = ($dns->{authority}->[0] ? $dns->{authority} : $dns->{answer});
+    # }
+
+    my @rrs = (
+          $self->zone->authority
+        ? $self->zone->authority
+        : $self->zone->answer
+    );
+
+    $self->log("from_net_dns(): " . dump(@rrs));    #debug
 
     my $zone;
-    print __PACKAGE__ . ": " . Dumper("DNS: ", $dns) if $self->debug;
-
-    #eval($domain = ($dns->question)[0]->qname)
-    #    unless $domain;
-    print STDERR __PACKAGE__ . ": " . "DOMAIN: >>$domain<<\n";
-    my $hash;
-    if (ref $dns eq 'ARRAY') {
-        $hash = $dns;
-    }
-    elsif (ref $dns eq 'HASH' && exists $dns->{zone}) {
-        $hash = $dns->{zone};
-    }
-    else {
-        $hash = ($dns->{authority}->[0] ? $dns->{authority} : $dns->{answer});
-    }
-
-    foreach my $rr (@{$hash}) {
+    foreach my $rr (@rrs) {
         given ($rr->type) {
             my $name = $rr->name;
             $name =~ s/\.?$domain$//;
             when ('SOA') {
                 $zone->{soa} = {
-                    'retry'   => $rr->retry,
-                    'email'   => $rr->rname,
-                    'refresh' => $rr->refresh,
-                    'ttl'     => $rr->ttl,
-                    'expire'  => $rr->expire,
+                    retry   => $rr->retry,
+                    email   => $rr->rname,
+                    refresh => $rr->refresh,
+                    ttl     => $rr->ttl,
+                    expire  => $rr->expire,
                 };
                 $zone->{domain} = $rr->name;
                 $domain = $zone->{domain};
+                $self->domain($domain);
             }
             when ('NS') {
-                push(@{ $zone->{ns} }, { name => $rr->nsdname });
+                push(
+                    @{ $zone->{ns} },
+                    { name => $rr->nsdname, ttl => $rr->ttl });
+                push(
+                    @{ $zone->{rr} }, {
+                        name => $name || undef,
+                        ttl  => $rr->ttl,
+                        type => $rr->type,
+                        value => $rr->nsdname,
+                    });
             }
             when (/^A{1,4}$/) {
                 push(
@@ -399,65 +483,18 @@ sub from_net_dns {
         }
 
     }
+
     return $zone;
 }
 
-=head2 to_string
+sub log {
+    my ($self, $msg) = @_;
 
-Stringify a Net::DNS object
+    return unless (ref \$msg eq 'SCALAR');
 
-=cut
+    print STDERR __PACKAGE__ . ": $msg\n";
 
-sub to_string {
-    my ($self, $dns) = @_;
-
-    unless (ref $dns eq 'Net::DNS') {
-        carp __PACKAGE__ . ": argument has to be a Net::DNS object";
-        return;
-    }
-
-    return $dns->string;
-}
-
-=head2 load_plugin
-
-Loads a Plugin for Net::DNS::Abstract
-
-=cut
-
-sub load_plugin {
-    my ($self, $plugin, $params) = @_;
-
-    my $module = 'Net::DNS::Abstract::Plugins::' . ucfirst($plugin);
-    load $module;
-    my $new_mod = $module->new();
-    $self->register($new_mod->provides());
-    foreach my $key (keys %{$params}) {
-        next unless $key =~ m{$plugin};
-        eval { $new_mod->$key($params->{$key}) };
-        warn $@ if $@;
-    }
-    print __PACKAGE__ . ": " . Dumper("load", $self->registry)
-        if $self->debug();
-    return $new_mod;
-}
-
-=head2 register
-
-Registers a plugin in the internal registry (with all the callbacks we
-need for dispatching).
-
-=cut
-
-sub register {
-    my ($self, $params) = @_;
-
-    foreach my $key (keys %{$params}) {
-        $self->registry->{$key} = $params->{$key};
-    }
     return;
 }
-
-__PACKAGE__->meta->make_immutable();
 
 1;

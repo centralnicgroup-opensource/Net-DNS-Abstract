@@ -1,40 +1,27 @@
 package Net::DNS::Abstract::Plugins::Hexonet;
 
 use 5.010;
-use Any::Moose;
-
-extends 'Net::DNS::Abstract';
+use Any::Moose 'Role';
 
 # ABSTRACT: interface to Hexonet
 
-=head2 provides
+=head2 axfr
 
-Register in the Net::DNS dispatch table for backend calls
-
-=cut
-
-sub provides {
-    my ($self) = @_;
-
-    return { Hexonet => { axfr => \&status_zone } };
-}
-
-=head2 status_zone
-
-Query a DNS zone via InternetX
+Query a DNS zone via Hexonet
 
 =cut
 
-sub status_zone {
-    my ($self, $domain) = @_;
+around 'axfr' => sub {
+    my ($orig, $self, $ns) = @_;
+
+    $self->$orig($ns);
 
     my $zone = {
-        domain    => $domain,
-        interface => 'Hexonet',
+        domain    => $self->domain,
+        interface => 'hexonet',
     };
-    return $zone;
-}
 
-__PACKAGE__->meta->make_immutable();
+    return $zone;
+};
 
 1;

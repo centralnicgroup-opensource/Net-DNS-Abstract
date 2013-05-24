@@ -1,125 +1,143 @@
 package Net::DNS::Abstract::Plugins::Internetx;
 
 use 5.010;
-use Any::Moose;
+use Any::Moose 'Role';
 use Net::DNS;
-use Net::DNS::Abstract::Plugins::Daemonise;
-
-extends 'Net::DNS::Abstract';
-
-has 'ix_transport' => (
-    is      => 'rw',
-    default => sub { Net::DNS::Abstract::Plugins::Daemonise->new() },
-    lazy    => 1,
-);
 
 # ABSTRACT: wrapper interface for InternetX
 
-=head2 provides
+with 'Net::DNS::Abstract::Plugins::Daemonise';
 
-Register in the Net::DNS dispatch table for backend calls
+# Daemonise plugin has to implement ask()
+requires 'ask';
 
-=cut
-
-sub provides {
-    my ($self) = @_;
-
-    return {
-        internetx => {
-            axfr   => \&ix_status_zone,
-            update => \&ix_update_zone,
-            create => \&ix_create_zone,
-            delete => \&ix_delete_zone,
-        } };
-}
-
-=head2 ix_status_zone
+=head2 axfr
 
 Query a DNS zone via InternetX
 
+Returns: Net::DNS::Packet object or HASHREF of parsed IX answer on error
+
 =cut
 
-sub ix_status_zone {
-    my ($self, $domain, $ns) = @_;
+around 'axfr' => sub {
+    my ($orig, $self, $ns) = @_;
+
+    $self->$orig($ns);
 
     my $hash = {
         command => 'status_zone',
-        options => { domain => $domain, ns => $ns, interface => 'internetx' },
+        options => {
+            domain    => $self->domain,
+            ns        => $ns,
+            interface => 'internetx',
+        },
     };
-    my $res = $self->ix_transport->ask($hash);
-    my $zone = $self->_parse_ix($res->{response} || $res);
-    return $zone;
-}
 
-=head2 ix_update_zone
+    my $res = $self->ask($hash);
+    my $ix_parsed = $self->_parse_ix($res->{response} || $res);
 
-Update InternetX based on a Net::DNS update object
+    return $ix_parsed;
+};
+
+=head2 create
+
+Create an empty zone in the InternetX NS architecture
+
+Returns: HASHREF of parsed IX answer
 
 =cut
 
-sub ix_update_zone {
-    my ($self, $update) = @_;
+around 'create' => sub {
+    my ($orig, $self, $ns) = @_;
 
-    my $hash = {
-        command => 'update_zone',
-
-        # TODO figure out why $update->{domain} is not set but zone is
-        options => $self->from_net_dns($update->{zone}, $update->{domain}),
-    };
-    $hash->{options}->{interface} = 'internetx';
-    my $res = $self->ix_transport->ask($hash);
-    my $zone = $self->_parse_ix($res->{response} || $res);
-
-    return $zone;
-}
-
-=head2 ix_create_zone
-
-Create a zone in the InternetX NS architecture
-
-=cut
-
-sub ix_create_zone {
-    my ($self, $domain, $ns) = @_;
+    $self->$orig($ns);
 
     my $hash = {
         command => 'create_zone',
-        options => { domain => $domain, ns => $ns, interface => 'internetx' },
+        options => {
+            domain    => $self->domain,
+            ns        => $ns,
+            interface => 'internetx',
+        },
     };
-    my $res = $self->ix_transport->ask($hash);
-    my $zone = $self->_parse_ix($res->{response} || $res);
-    return $zone;
-}
 
-=head2 ix_delete_zone
+    my $res = $self->ask($hash);
+    my $ix_parsed = $self->_parse_ix($res->{response} || $res);
 
-Delete a zone in the InternetX NS architecture
+    return $ix_parsed;
+};
+
+=head2 update
+
+Update InternetX based on zone attribute (Net::DNS::Packet object)
+
+Returns: HASHREF of parsed IX answer
 
 =cut
 
-sub ix_delete_zone {
-    my ($self, $domain, $ns) = @_;
+around 'update' => sub {
+    my ($orig, $self, $zone, $ns) = @_;
+
+    $self->$orig($zone);
+
+    return unless ($self->zone->authority || $self->zone->answer);
+
+    my $hash = {
+        command => 'update_zone',
+        options => $self->from_net_dns,
+    };
+    $hash->{options}->{interface} = 'internetx';
+
+    # overwrite NS from zone if given
+    $hash->{options}->{ns} = $ns if ($ns and (ref $ns eq 'ARRAY'));
+
+    my $res = $self->ask($hash);
+    my $ix_parsed = $self->_parse_ix($res->{response} || $res);
+
+    return $ix_parsed;
+};
+
+=head2 delete
+
+Delete a zone in the InternetX NS architecture
+
+Returns: HASHREF of parsed IX answer
+
+=cut
+
+around 'delete' => sub {
+    my ($orig, $self, $ns) = @_;
+
+    $self->$orig($ns);
 
     my $hash = {
         command => 'delete_zone',
-        options => { domain => $domain, ns => $ns, interface => 'internetx' },
+        options => {
+            domain    => $self->domain,
+            ns        => $ns,
+            interface => 'internetx',
+        },
     };
-    my $res = $self->ix_transport->ask($hash);
-    my $zone = $self->_parse_ix($res->{response} || $res);
-    return $zone;
-}
+    my $res = $self->ask($hash);
+    my $ix_parsed = $self->_parse_ix($res->{response} || $res);
+
+    return $ix_parsed;
+};
 
 =head2 _parse_ix
 
-Parse a raw IX answer into someting that we can deal with. This will
-return a Net::DNS object.
+Parse a raw IX answer into a Net::DNS::Packet object.
+
+Returns: Net::DNS::Packet object when zone was delivered successfully or
+HASHREF of IX answer otherwise
+
+  TODO: this should be error handling as Net::DNS expects it!
 
 =cut
 
 sub _parse_ix {
     my ($self, $data) = @_;
 
-    my $zone = $data->{data}->{zone};
     given ($data->{code}) {
         when (/^N/) { $data->{status} = 'pending' }
         when (/^S/) { $data->{status} = 'success' }
@@ -128,69 +146,69 @@ sub _parse_ix {
 
     # TODO this should be error handling as Net::DNS expects it!
     return { error => $data } unless $data->{status} eq 'success';
+    my $zone = $data->{data}->{zone};
     return $data unless $zone;
 
-    my $domain = $zone->{name}->{content};
-    my $packet = Net::DNS::Packet->new($domain, 'AXFR');
+    $self->domain($zone->{name}->{content});
+    $self->zone(Net::DNS::Packet->new($self->domain, 'AXFR'));
 
-    $packet->push(
-        answer => Net::DNS::RR->new(
-            name    => $domain,
-            mname   => $zone->{nserver}->[0]->{name}->{content},
-            rname   => $zone->{soa}->{email}->{content},
+    # add SOA first
+    $self->add_rr(
+        answer => {
+            type    => 'SOA',
+            name    => '',
+            serial  => time,
+            ns      => [ $zone->{nserver}->[0]->{name}->{content} ],
+            email   => $zone->{soa}->{email}->{content},
             retry   => $zone->{soa}->{retry}->{content},
             refresh => $zone->{soa}->{refresh}->{content},
             expire  => $zone->{soa}->{expire}->{content},
-            minimum => $zone->{soa}->{ttl}->{content},
-            type    => 'SOA',
-        ));
+            ttl     => $zone->{soa}->{ttl}->{content},
+        });
 
     if (ref $zone->{rr} eq 'ARRAY') {
         foreach my $rr (@{ $zone->{rr} }) {
             $rr->{name}->{content} = ''
                 unless exists $rr->{name}->{content};
             $rr->{name}->{content} = ''
-                if ($rr->{name}->{content} eq $domain);
+                if ($rr->{name}->{content} eq $self->domain);
             $rr->{value}->{content} =~ s/\.+$//;
-            $packet->push(
-                answer => $self->rr_from_hash({
-                        ttl => $rr->{ttl}->{content} || 3600,
-                        name  => $rr->{name}->{content},
-                        value => $rr->{value}->{content},
-                        type  => uc($rr->{type}->{content}),
-                        prio  => $rr->{pref}->{content} || undef,
-                    },
-                    $domain
-                ));
+
+            $self->add_rr(
+                answer => {
+                    ttl => $rr->{ttl}->{content} || 3600,
+                    name  => $rr->{name}->{content},
+                    value => $rr->{value}->{content},
+                    type  => uc($rr->{type}->{content}),
+                    prio  => $rr->{pref}->{content} || undef,
+                });
         }
     }
     else {
         $zone->{rr}->{name}->{content} = ''
             unless exists $zone->{rr}->{name}->{content};
         $zone->{rr}->{name}->{content} = ''
-            if ($zone->{rr}->{name}->{content} eq $domain);
+            if ($zone->{rr}->{name}->{content} eq $self->domain);
         $zone->{rr}->{value}->{content} =~ s/\.+$//;
-        $packet->push(
-            answer => $self->rr_from_hash({
-                    ttl => $zone->{rr}->{ttl}->{content} || 3600,
-                    name  => $zone->{rr}->{name}->{content},
-                    value => $zone->{rr}->{value}->{content},
-                    type  => uc($zone->{rr}->{type}->{content}),
-                    prio  => $zone->{rr}->{pref}->{content} || undef,
-                },
-                $domain
-            ));
+
+        $self->add_rr(
+            answer => {
+                ttl => $zone->{rr}->{ttl}->{content} || 3600,
+                name  => $zone->{rr}->{name}->{content},
+                value => $zone->{rr}->{value}->{content},
+                type  => uc($zone->{rr}->{type}->{content}),
+                prio  => $zone->{rr}->{pref}->{content} || undef,
+            });
     }
+
     if ($zone->{main}) {
-        $packet->push(
-            answer => $self->rr_from_hash({
-                    ttl => $zone->{main}->{ttl}->{content} || 3600,
-                    name  => '',
-                    value => $zone->{main}->{value}->{content},
-                    type  => 'A'
-                },
-                $domain
-            ));
+        $self->add_rr(
+            answer => {
+                ttl => $zone->{main}->{ttl}->{content} || 3600,
+                name  => '',
+                value => $zone->{main}->{value}->{content},
+                type  => 'A',
+            });
     }
 
     # TODO check if we still want to convert old www_include records or
@@ -206,7 +224,7 @@ sub _parse_ix {
     #                        value => $r->{value},
     #                        type  => 'A'
     #                    },
-    #                    $domain
+    #                    $self->domain
     #                ));
     #
     #        }
@@ -215,31 +233,14 @@ sub _parse_ix {
 
     my @ns;
     foreach my $ns (@{ $zone->{nserver} }) {
-        $packet->push(
-            answer => $self->rr_from_hash({
-                    value => $ns->{name}->{content},
-                    type  => 'NS'
-                },
-                $domain
-            ));
+        $self->add_rr(
+            answer => {
+                value => $ns->{name}->{content},
+                type  => 'NS'
+            });
     }
-    return $packet;
+
+    return $self->zone;
 }
-
-=head2 internetx_transport
-
-=cut
-
-sub internetx_transport {
-    my ($self, $d) = @_;
-
-    $self->ix_transport(
-        Net::DNS::Abstract::Plugins::Daemonise->new({ daemonise => $d }));
-    $self->ix_transport->debug($self->debug);
-
-    return;
-}
-
-__PACKAGE__->meta->make_immutable();
 
 1;
