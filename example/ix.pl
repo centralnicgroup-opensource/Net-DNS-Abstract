@@ -36,7 +36,7 @@ domain.tld. 14400   IN      NS      ns4.iwantmyname.net.
 
 ;; ADDITIONAL SECTION (0 records)';
 
-my $zone = $dns->to_net_dns({
+my $zone = $dns->our_to_net_dns({
     'ns' => [
         { 'name' => 'ns1.iwantmyname.net' },
         { 'name' => 'ns2.iwantmyname.net' },

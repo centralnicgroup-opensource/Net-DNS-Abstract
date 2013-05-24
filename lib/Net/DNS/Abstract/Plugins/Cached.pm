@@ -1,11 +1,11 @@
 package Net::DNS::Abstract::Plugins::Cached;
 
 use 5.010;
-use Any::Moose;
+use Any::Moose 'Role';
 use True::Truth;
-use Data::Dumper;
+use Data::Dump 'dump';
 
-extends 'Net::DNS::Abstract';
+# ABSTRACT: interface to True::Truth
 
 has 'truth' => (
     is      => 'ro',
@@ -14,49 +14,47 @@ has 'truth' => (
     lazy    => 1,
 );
 
-# ABSTRACT: interface to True::Truth
-
-=head2 provides
-
-Register in the Net::DNS dispatch table for backend calls
-
-=cut
-
-sub provides {
-    my ($self) = @_;
-
-    return { Cached => { axfr => \&status_zone, update => \&update_zone } };
-}
-
-=head2 status_zone
+=head2 axfr
 
 Query a DNS zone from the Cache
 
+Returns: Net::DNS::Packet object or undef on error
+
 =cut
 
-sub status_zone {
-    my ($self, $domain, $ns) = @_;
+around 'axfr' => sub {
+    my ($orig, $self, $ns) = @_;
 
-    my $truth = $self->truth->get_true_truth($domain);
-    my $dns   = $self->to_net_dns($truth->{dns});
-    print __PACKAGE__ . ": " . $dns->string;
-    return $dns;
-}
+    $self->$orig($ns);
 
-=head2 update_zone
+    my $truth = $self->truth->get_true_truth($self->domain);
+    $self->zone($self->our_to_net_dns($truth->{dns}));
+
+    $self->log($self->zone->string) if $self->debug;
+
+    return $self->zone;
+};
+
+=head2 update
 
 Update a DNS zone in the Cache
 
+Returns: our normalized zone format or undef on error
+
 =cut
 
-sub update_zone {
-    my ($self, $dns) = @_;
+around 'update' => sub {
+    my ($orig, $self, $zone) = @_;
 
-    my $zone = $self->from_net_dns($dns);
-    print __PACKAGE__ . ": " . Dumper($zone);
+    $self->$orig($zone);
+
+    $zone = $self->from_net_dns;
+
+    # TODO: write zone back into true::truth cache?
+
+    $self->log(dump($zone)) if $self->debug;
+
     return $zone;
-}
-
-__PACKAGE__->meta->make_immutable();
+};
 
 1;

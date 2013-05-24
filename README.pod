@@ -6,7 +6,7 @@ Net::DNS::Abstract - Net::DNS interface to several DNS backends via API
 
 =head1 VERSION
 
-version 0.7
+version 0.8
 
 =head1 SYNOPSIS
 
@@ -15,19 +15,30 @@ implementation. Unfortunately we don't intercat with DNS via DNS
 protocols but via 3rd party abstration layers that have all sorts of
 quirks. We try to provide one unified interface here.
 
+=head1 ATTRIBUTES
+
+=head2 debug
+
+=head2 domain
+
+the domain as a punycode string of the underlaying zone (required)
+
+=head2 zone
+
+the Net::DNS::Packet object of the underlaying zone
+
+=head2 interface
+
+defines the interface plugin to load (required)
+
 =head1 SUBROUTINES/METHODS
 
 =head2 axfr
 
 Do a zone transfer (actually poll a zone from a 3rd party provider) and
-return a list of Net::DNS::RR objects. Additional to a list of nameservers
-we need a backend identifyer that we have a API plugin for.
+return a Net::DNS::Packet objects.
 
-    axfr({ 
-        domain => 'example.com', 
-        interface => 'InternetX', 
-        ns => ['ns1.provider.net']
-    })
+    axfr(['ns1.provider.net'])
 
 =head2 update
 
@@ -43,35 +54,29 @@ Create a new zone in a DNS backend
 
 Delete a zone from a DNS backend
 
-=head2 to_net_dns
+=head2 our_to_net_dns
 
-Converts a zone from our generic representation to Net::DNS format.
+Converts a zone from our generic representation to Net::DNS::Packet format.
 
-=head2 add_rr_update
+Returns: Net::DNS::Packet object representation of the zone or undef on error
 
-Adds a RR hash to a Net::DNS object. Also converts our standardized hash
-into a Net::DNS::RR object.
+=head2 zonefile_to_net_dns
 
-=head2 rr_from_hash
+Converts a zone from a Zonefile string representation to Net::DNS::Packet format.
 
-Create a Net::DNS::RR object from a hash
+Returns: Net::DNS::Packet object representation of the zone or undef on error
+
+=head2 add_rr
+
+Add a Net::DNS::RR object to the zone attribute
+
+Returns: true when successful, false otherwise
 
 =head2 from_net_dns
 
 Convert a Net::DNS object into our normalized format
 
-=head2 to_string
-
-Stringify a Net::DNS object
-
-=head2 load_plugin
-
-Loads a Plugin for Net::DNS::Abstract
-
-=head2 register
-
-Registers a plugin in the internal registry (with all the callbacks we
-need for dispatching).
+Returns: our normalized format as HASHREF or undef on error
 
 =head1 AUTHOR
 

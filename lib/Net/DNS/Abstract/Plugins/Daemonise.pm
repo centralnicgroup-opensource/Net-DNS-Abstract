@@ -1,21 +1,36 @@
 package Net::DNS::Abstract::Plugins::Daemonise;
 
 use 5.010;
-use Any::Moose;
-
-extends 'Net::DNS::Abstract';
-
-has 'daemonise' => (
-    is      => 'rw',
-    default => sub { },
-);
+use Any::Moose 'Role';
 
 # ABSTRACT: interface to Daemonise
 
+has 'transport' => (
+    is       => 'rw',
+    isa      => 'Daemonise',
+    required => 1,
+);
+
+=head2 platform
+
+=cut
+
+has 'platform' => (
+    is      => 'rw',
+    isa     => 'Str',
+    default => sub { 'iwmn' },
+);
+
+# alias 'daemonise' to 'transport' for understandability
+sub daemonise {
+    my ($self) = @_;
+    return $self->transport;
+}
+
 =head2 ask
 
-Generic interface to Daemoniser to push messages into a RabbitMQ
-endpoint in a standardised way.
+Generic interface to Daemonise to push messages into a RabbitMQ endpoint in a
+standardised way.
 
 =cut
 
@@ -36,10 +51,7 @@ sub ask {
     my $q = 'interface.' . $hash->{options}->{interface};
     my $res = $self->daemonise->queue($q, $frame);
 
-    # TODO add retry here
     return $res;
 }
-
-__PACKAGE__->meta->make_immutable();
 
 1;
