@@ -71,12 +71,18 @@ has 'interface' => (
 before 'new' => sub {
     my ($class, %args) = @_;
 
-    return unless exists $args{interface};
+    if(exists $args{interface}){
+        push(@{$args{preload}}, $args{interface});
+    }
 
-    my $module = 'Net::DNS::Abstract::Plugins::' . ucfirst($args{interface});
-    with $module;
+    if(exists $args{preload}){
+        foreach my $mod (@{$args{preload}}){
+            my $module = 'Net::DNS::Abstract::Plugins::' . ucfirst($mod);
+            with $module;
+            print STDERR __PACKAGE__ . ": loaded plugin: $module\n";
+        }
+    }
 
-    print STDERR __PACKAGE__ . ": loaded plugin: $module\n";
 };
 
 =head1 SUBROUTINES/METHODS
