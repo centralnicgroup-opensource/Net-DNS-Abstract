@@ -71,12 +71,12 @@ has 'interface' => (
 before 'new' => sub {
     my ($class, %args) = @_;
 
-    if(exists $args{interface}){
-        push(@{$args{preload}}, $args{interface});
+    if (exists $args{interface}) {
+        push(@{ $args{preload} }, $args{interface});
     }
 
-    if(exists $args{preload}){
-        foreach my $mod (@{$args{preload}}){
+    if (exists $args{preload}) {
+        foreach my $mod (@{ $args{preload} }) {
             my $module = 'Net::DNS::Abstract::Plugins::' . ucfirst($mod);
             with $module;
             print STDERR __PACKAGE__ . ": loaded plugin: $module\n";
@@ -235,7 +235,7 @@ sub add_rr {
 
     return
         unless $section =~
-            m/^(header|question|answer|pre|prereq|authority|update|additional)$/;
+        m/^(header|question|answer|pre|prereq|authority|update|additional)$/;
 
     given ($rr->{type}) {
         when (/^SOA$/i) {
@@ -295,11 +295,11 @@ sub add_rr {
                         ? $rr->{name} . '.' . $self->domain
                         : $self->domain
                     ),
-                    class    => 'IN',
-                    ttl      => $rr->{ttl} || 14400,
-                    type     => $rr->{type},
-                    exchange => $rr->{value},
-                    prio     => $rr->{prio},
+                    class      => 'IN',
+                    ttl        => $rr->{ttl} || 14400,
+                    type       => $rr->{type},
+                    exchange   => $rr->{value},
+                    preference => $rr->{prio},
                 ));
             return 1;
         }
@@ -313,13 +313,13 @@ sub add_rr {
                         ? $rr->{name} . '.' . $self->domain
                         : $self->domain
                     ),
-                    class  => 'IN',
-                    ttl    => $rr->{ttl} || 14400,
-                    type   => $rr->{type},
-                    target => $target,
-                    weight => $weight,
-                    port   => $port,
-                    prio   => $rr->{prio},
+                    class    => 'IN',
+                    ttl      => $rr->{ttl} || 14400,
+                    type     => $rr->{type},
+                    target   => $target,
+                    weight   => $weight,
+                    port     => $port,
+                    priority => $rr->{prio},
                 ));
             return 1;
         }
