@@ -327,9 +327,11 @@ sub add_rr {
 
             # split too long TXT records into multiple records on word boundary
             # limit: 255 chars
-            my @txts = $rr->{value} =~ /(.{1,255})\W/gms;
+            # FIXME this currently breaks SPF records as it cuts off the
+            # trailing '~all'. temporarily disabled by [norbu09]
+            #my @txts = $rr->{value} =~ /(.{1,255})\W/gms;
 
-            foreach my $txt (@txts) {
+            #foreach my $txt (@txts) {
                 $self->zone->push(
                     $section => Net::DNS::RR->new(
                         name => (
@@ -340,9 +342,9 @@ sub add_rr {
                         class   => 'IN',
                         ttl     => $rr->{ttl} || 3600,
                         type    => $rr->{type},
-                        txtdata => $txt,
+                        txtdata => $rr->{value},
                     ));
-            }
+                #}
 
             return 1;
         }
