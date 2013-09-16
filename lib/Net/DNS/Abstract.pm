@@ -66,13 +66,18 @@ has 'interface' => (
     is       => 'rw',
     isa      => 'Str',
     required => 1,
+    default => 'internal',
 );
 
 before 'new' => sub {
     my ($class, %args) = @_;
 
     if (exists $args{interface}) {
-        push(@{ $args{preload} }, $args{interface});
+        push(@{ $args{preload} }, $args{interface})
+        # TODO write some sanitisation stuff with internal conversions
+        # of our hash into a Net::DNS structure. We need this for hash
+        # -> zonefile conversions
+            unless $args{interface} eq 'internal';
     }
 
     if (exists $args{preload}) {
@@ -114,25 +119,7 @@ sub update {
         return;
     }
 
-    given (ref $zone) {
-        when ('HASH') {
-            $self->log('update(): zone has HASH format') if $self->debug;
-            $self->our_to_net_dns($zone);
-        }
-        when ('') {
-            $self->log('update(): zone is a Zonefile string') if $self->debug;
-            $self->zonefile_to_net_dns($zone);
-        }
-        when ('Net::DNS::Packet') {
-            $self->log('update(): zone is Net::DNS::Packet format')
-                if $self->debug;
-            $self->zone($zone);
-        }
-        default {
-            $self->log('update(): unknown zone format');
-        }
-    }
-
+    $self->anything_to_net_dns($zone);
     return;
 }
 
@@ -479,6 +466,42 @@ sub from_net_dns {
     }
 
     return $zone;
+}
+
+=head2 anything_to_net_dns
+
+Convert a Zonefile or our internal hash representation to a Net::DNS
+object
+
+=cut
+
+sub anything_to_net_dns {
+    my ($self, $zone) = @_;
+
+    unless (defined $zone) {
+        $self->log('anything_to_net_dns(): missing "zone" parameter');
+        return;
+    }
+
+    given (ref $zone) {
+        when ('HASH') {
+            $self->log('anything_to_net_dns(): zone has HASH format') if $self->debug;
+            return $self->our_to_net_dns($zone);
+        }
+        when ('') {
+            $self->log('anything_to_net_dns(): zone is a Zonefile string') if $self->debug;
+            return $self->zonefile_to_net_dns($zone);
+        }
+        when ('Net::DNS::Packet') {
+            $self->log('anything_to_net_dns(): zone is Net::DNS::Packet format')
+                if $self->debug;
+            return $self->zone($zone);
+        }
+        default {
+            $self->log('anything_to_net_dns(): unknown zone format');
+        }
+    }
+    return;
 }
 
 =head2 log
