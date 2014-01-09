@@ -1,5 +1,7 @@
 =pod
 
+=encoding UTF-8
+
 =head1 NAME
 
 Net::DNS::Abstract - Net::DNS interface to several DNS backends via API
@@ -78,11 +80,23 @@ Convert a Net::DNS object into our normalized format
 
 Returns: our normalized format as HASHREF or undef on error
 
+=head2 anything_to_net_dns
+
+Convert a Zonefile or our internal hash representation to a Net::DNS
+object
+
 =head2 log
 
 print log message to STDERR including this module's name
 
 Returns: nothing
+
+=head2 sanitise_zone
+
+Sanitise a zone. This should always be called explicitly if you think
+the zone could contain duplicate records. this is normally not necessary
+but converting between formats of zone representations can trigger
+unwanted results like multiple NS records.
 
 =head1 AUTHOR
 
@@ -95,3 +109,4 @@ This software is copyright (c) 2013 by ideegeo Group Limited.
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
+=cut
