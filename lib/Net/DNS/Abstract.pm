@@ -401,16 +401,22 @@ sub from_net_dns {
                 $self->domain($domain);
             }
             when ('NS') {
-                push(
-                    @{ $zone->{ns} },
-                    { name => $rr->nsdname, ttl => $rr->ttl });
-                push(
-                    @{ $zone->{rr} }, {
-                        name => $name || undef,
-                        ttl  => $rr->ttl,
-                        type => $rr->type,
-                        value => $rr->nsdname,
-                    });
+                # if we have a NS record for the domain itself we want
+                # it in $zone->{ns} if it is a delegation for a
+                # subdomain we want it in the $zone->{rr} section
+                if($rr->name eq $self->domain){
+                    push(
+                        @{ $zone->{ns} },
+                        { name => $rr->nsdname, ttl => $rr->ttl });
+                } else {
+                    push(
+                        @{ $zone->{rr} }, {
+                            name => $name || undef,
+                            ttl  => $rr->ttl,
+                            type => $rr->type,
+                            value => $rr->nsdname,
+                        });
+                }
             }
             when (/^A{1,4}$/) {
                 push(
@@ -520,6 +526,40 @@ sub log {    ## no critic (ProhibitBuiltinHomonyms)
     print STDERR __PACKAGE__ . ": $msg\n";
 
     return;
+}
+
+=head2 sanitise_zone
+
+Sanitise a zone. This should always be called explicitly if you think
+the zone could contain duplicate records. this is normally not necessary
+but converting between formats of zone representations can trigger
+unwanted results like multiple NS records.
+
+=cut
+
+sub sanitise_zone {
+    my ($self, $zone) = @_;
+
+    my $c = 0;
+    foreach my $rr (@{$zone->{rr}}){
+        delete $zone->[$c] 
+    }
+}
+
+# TODO we may have to do more here like make sure all keys have the same case.
+sub _check_for_dupes {
+    my ($zone, $record) = @_;
+
+    foreach my $rr (@{$zone}){
+        my $c = 0;
+        foreach my $ky (keys %{$rr}){
+            $c++;
+            next unless exists $record->{$ky};
+            next unless uc($rr->{$ky}) eq uc($record->{$ky});
+            $c--;
+        }
+        return 1 if $c == 0;
+    }
 }
 
 1;
