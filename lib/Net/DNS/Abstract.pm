@@ -5,7 +5,7 @@ use Any::Moose;
 use Module::Load;
 use Net::DNS;
 use Net::DNS::Packet;
-use Net::DNS::ZoneFile;
+use Net::DNS::ZoneFile::Fast;
 use Data::Dump 'dump';
 
 # ABSTRACT: Net::DNS interface to several DNS backends via API
@@ -201,8 +201,12 @@ Returns: Net::DNS::Packet object representation of the zone or undef on error
 sub zonefile_to_net_dns {
     my ($self, $zonefile) = @_;
 
+    
+    $self->log('zonefile_to_net_dns(): Domain is: ' . $self->domain) if $self->debug;
+    $self->log('zonefile_to_net_dns(): Zonefile is: ' . $zonefile) if $self->debug;
     $self->zone(Net::DNS::Packet->new($self->domain));
-    $self->zone->push(update => Net::DNS::ZoneFile->parse($zonefile));
+    my $zone = Net::DNS::ZoneFile::Fast::parse($zonefile);
+    $self->zone->push(update => @$zone);
 
     return $self->zone;
 }
@@ -383,8 +387,11 @@ sub from_net_dns {
         : $self->zone->answer
     );
 
+    $self->log("from_net_dns(): RRs: " . dump(@rrs));
+
     my $zone;
     foreach my $rr (@rrs) {
+        $self->log("from_net_dns(): RR: " . ref($rr));
         given ($rr->type) {
             my $name = $rr->name;
             $name =~ s/\.?$domain$//;
