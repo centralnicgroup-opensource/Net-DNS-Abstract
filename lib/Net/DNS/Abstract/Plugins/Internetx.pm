@@ -166,11 +166,11 @@ sub _parse_ix {
     return $data unless $zone;
 
     $self->domain($zone->{name}->{content});
-    $self->zone(Net::DNS::Packet->new($self->domain, 'AXFR'));
+    my $nda_zone = Net::DNS::Packet->new($self->domain, 'AXFR');
 
     my $nda_rr = Net::DNS::Abstract::RR->new(domain => $self->domain);
     # add SOA first
-    $nda_rr->add(
+    $nda_zone = $nda_rr->add($nda_zone,
         answer => {
             type    => 'SOA',
             name    => '',
@@ -191,7 +191,7 @@ sub _parse_ix {
                 if ($rr->{name}->{content} eq $self->domain);
             $rr->{value}->{content} =~ s/\.+$//;
 
-            $nda_rr->add(
+            $nda_zone = $nda_rr->add($nda_zone,
                 answer => {
                     ttl => $rr->{ttl}->{content} || 3600,
                     name  => $rr->{name}->{content},
@@ -208,7 +208,7 @@ sub _parse_ix {
             if ($zone->{rr}->{name}->{content} eq $self->domain);
         $zone->{rr}->{value}->{content} =~ s/\.+$//;
 
-        $nda_rr->add(
+        $nda_zone = $nda_rr->add($nda_zone,
             answer => {
                 ttl => $zone->{rr}->{ttl}->{content} || 3600,
                 name  => $zone->{rr}->{name}->{content},
@@ -219,7 +219,7 @@ sub _parse_ix {
     }
 
     if ($zone->{main}) {
-        $nda_rr->add(
+        $nda_zone = $nda_rr->add($nda_zone,
             answer => {
                 ttl => $zone->{main}->{ttl}->{content} || 3600,
                 name  => '',
@@ -250,13 +250,14 @@ sub _parse_ix {
 
     my @ns;
     foreach my $ns (@{ $zone->{nserver} }) {
-        $nda_rr->add(
+        $nda_zone = $nda_rr->add($nda_zone,
             answer => {
                 value => $ns->{name}->{content},
                 type  => 'NS'
             });
     }
 
+    $self->zone($nda_zone);
     return $self->zone;
 }
 

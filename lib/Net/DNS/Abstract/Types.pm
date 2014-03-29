@@ -70,7 +70,7 @@ sub our_to_net_dns {
 
     my $nda_rr = Net::DNS::Abstract::RR->new(domain => $domain);
     # TODO this SOA record needs cleanup and debugging!
-    $nda_rr->add($nda_zone,
+    $nda_zone = $nda_rr->add($nda_zone,
         update => {
             type    => 'SOA',
             name    => '',
@@ -85,12 +85,12 @@ sub our_to_net_dns {
 
     # convert RR section
     foreach my $rr (@{ $zone->{rr} }) {
-        $nda_rr->add($nda_zone, update => $rr);
+        $nda_zone = $nda_rr->add($nda_zone, update => $rr);
     }
 
     # convert NS section
     foreach my $rr (@{ $zone->{ns} }) {
-        $nda_rr->add($nda_zone,
+        $nda_zone = $nda_rr->add($nda_zone,
             update => {
                 type  => 'NS',
                 name  => '',

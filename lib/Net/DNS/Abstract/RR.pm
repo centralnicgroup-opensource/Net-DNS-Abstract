@@ -52,7 +52,7 @@ sub add {
                     minimum => $rr->{ttl},
                     type    => $rr->{type},
                 ));
-            return 1;
+            return $zone;
         }
         when (/^A{1,4}$/i) {
             $zone->push(
@@ -67,7 +67,7 @@ sub add {
                     type    => $rr->{type},
                     address => $rr->{value},
                 ));
-            return 1;
+            return $zone;
         }
         when (/^CNAME$/i) {
             $zone->push(
@@ -82,7 +82,7 @@ sub add {
                     type  => $rr->{type},
                     cname => $rr->{value},
                 ));
-            return 1;
+            return $zone;
         }
         when (/^MX$/i) {
             $zone->push(
@@ -98,7 +98,7 @@ sub add {
                     exchange   => $rr->{value},
                     preference => $rr->{prio},
                 ));
-            return 1;
+            return $zone;
         }
         when (/^SRV$/i) {
             my ($weight, $port, $target) = split(/\s/, $rr->{value}, 3);
@@ -118,7 +118,7 @@ sub add {
                     port     => $port,
                     priority => $rr->{prio},
                 ));
-            return 1;
+            return $zone;
         }
         when (/^TXT$/i) {
 
@@ -144,7 +144,7 @@ sub add {
 
             #}
 
-            return 1;
+            return $zone;
         }
         when (/^NS$/i) {
             $zone->push(
@@ -159,7 +159,7 @@ sub add {
                     type    => $rr->{type},
                     nsdname => $rr->{value},
                 ));
-            return 1;
+            return $zone;
         }
         default {
             warn('add_arr(): '

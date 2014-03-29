@@ -8,7 +8,7 @@ Net::DNS::Abstract - Net::DNS interface to several DNS backends via API
 
 =head1 VERSION
 
-version 1.0
+version 1.1
 
 =head1 SYNOPSIS
 
@@ -27,7 +27,8 @@ the domain as a punycode string of the underlaying zone (required)
 
 =head2 zone
 
-the Net::DNS::Packet object of the underlaying zone
+the Net::DNS::Packet object of the underlaying zone including a subtype
+to convert between formats to Net::DNS
 
 =head2 interface
 
@@ -56,34 +57,25 @@ Create a new zone in a DNS backend
 
 Delete a zone from a DNS backend
 
-=head2 our_to_net_dns
+=head2 to_string
 
-Converts a zone from our generic representation to Net::DNS::Packet format.
+Converts a Net::DNS object into a flat zonefile without comments and
+empty lines. This is an alternative to calling $nda->string
 
-Returns: Net::DNS::Packet object representation of the zone or undef on error
+This function returns a zonefile string
 
-=head2 zonefile_to_net_dns
+=head2 string_eq
 
-Converts a zone from a Zonefile string representation to Net::DNS::Packet format.
+Overloading endpoint for string comparison of two Net::DNS::Abstract
+objects
 
-Returns: Net::DNS::Packet object representation of the zone or undef on error
+This function returns a zonefile string
 
-=head2 add_rr
-
-Add a Net::DNS::RR object to the zone attribute
-
-Returns: true when successful, false otherwise
-
-=head2 from_net_dns
+=head2 to_hash
 
 Convert a Net::DNS object into our normalized format
 
 Returns: our normalized format as HASHREF or undef on error
-
-=head2 anything_to_net_dns
-
-Convert a Zonefile or our internal hash representation to a Net::DNS
-object
 
 =head2 log
 

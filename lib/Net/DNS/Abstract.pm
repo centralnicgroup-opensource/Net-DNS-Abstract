@@ -93,7 +93,7 @@ before 'new' => sub {
         foreach my $mod (@{ $args{preload} }) {
             my $module = 'Net::DNS::Abstract::Plugins::' . ucfirst($mod);
             with $module;
-            print STDERR __PACKAGE__ . ": loaded plugin: $module\n" if $class->debug;
+            print STDERR __PACKAGE__ . ": loaded plugin: $module\n";
         }
     }
 
