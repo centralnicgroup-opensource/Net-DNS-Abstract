@@ -1,12 +1,15 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 use Test::More;
 use Test::LongString;
 use Net::DNS::Packet;
 use lib 'lib';
-use Data::Dumper;
 
 BEGIN { use_ok('Net::DNS::Abstract'); }
+
+#subtest 'Author Tests', sub {
+#    plan skip_all => 'Author test. Set $ENV{TEST_AUTHOR} to a true value to run.'
+#    if (not $ENV{TEST_AUTHOR});
 
 my $zone = 'domain.tld. 3600   IN  SOA ns1.iwantmyname.net. email.domain.tld. (
                     1395960805  ;serial
@@ -71,16 +74,30 @@ ok($b, "loaded empty Net::DNS::Packet as zone");
 my $c = $dns->zone($zone);
 ok($c, "loaded zonefile as zone");
 
+# test zonefile import
 my $dns2 = Net::DNS::Abstract->new(domain => 'domain.tld');
 my $d = $dns2->zone($zone);
+ok($d, "loaded zonefile as zone");
 is_string_nows($dns, $zone, "round trip the zonefile");
+ 
+# test stringification
 is($dns, $dns2, "compare two DNS zones");
 
+# test hash export
 my $hash = $dns->to_hash;
+ok($hash, "exported hash from NDA");
 is_deeply($hash, $zone_hash, "compare hash representation of zone");
 
+# test hash import
 my $dns3 = Net::DNS::Abstract->new(domain => 'domain.tld');
 my $e = $dns3->zone($zone_hash);
+ok($e, "loaded zone hash as zone");
 is($dns, $dns3, "compare two DNS zones");
+
+# test Net::DNS import
+my $dns4 = Net::DNS::Abstract->new(domain => 'domain.tld');
+my $f = $dns4->zone($e);
+ok($f, "loaded NDA zone as zone");
+is($dns, $dns4, "compare two DNS zones");
 
 done_testing();

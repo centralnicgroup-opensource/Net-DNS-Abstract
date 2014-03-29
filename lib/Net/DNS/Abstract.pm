@@ -34,7 +34,7 @@ quirks. We try to provide one unified interface here.
 has 'debug' => (
     is      => 'rw',
     isa     => 'Bool',
-    default => sub { 1 },
+    default => sub { 0 },
     lazy    => 1,
 );
 
@@ -93,7 +93,7 @@ before 'new' => sub {
         foreach my $mod (@{ $args{preload} }) {
             my $module = 'Net::DNS::Abstract::Plugins::' . ucfirst($mod);
             with $module;
-            print STDERR __PACKAGE__ . ": loaded plugin: $module\n";
+            print STDERR __PACKAGE__ . ": loaded plugin: $module\n" if $class->debug;
         }
     }
 
@@ -475,7 +475,7 @@ sub log {    ## no critic (ProhibitBuiltinHomonyms)
 
     return unless (ref \$msg eq 'SCALAR');
 
-    print STDERR __PACKAGE__ . ": $msg\n";
+    print STDERR __PACKAGE__ . ": $msg\n" if $self->debug;
 
     return;
 }
