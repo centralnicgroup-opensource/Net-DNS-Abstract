@@ -1,8 +1,10 @@
 package Net::DNS::Abstract::Types;
 
 use 5.010;
+use lib 'lib';
 use Net::DNS::ZoneFile::Fast;
 use Net::DNS::Packet;
+use Net::DNS::Abstract::RR;
 
 use Mouse::Util::TypeConstraints;
 use MouseX::Types -declare => [qw(Zone)];
@@ -66,8 +68,9 @@ sub our_to_net_dns {
     my $domain = $zone->{domain};
     my $nda_zone = Net::DNS::Packet->new($domain, 'IN', 'SOA');
 
+    my $nda_rr = Net::DNS::Abstract::RR->new(domain => $domain);
     # TODO this SOA record needs cleanup and debugging!
-    add_rr($nda_zone, $domain, 
+    $nda_rr->add($nda_zone,
         update => {
             type    => 'SOA',
             name    => '',
@@ -82,12 +85,12 @@ sub our_to_net_dns {
 
     # convert RR section
     foreach my $rr (@{ $zone->{rr} }) {
-        add_rr($nda_zone, $domain, update => $rr);
+        $nda_rr->add($nda_zone, update => $rr);
     }
 
     # convert NS section
     foreach my $rr (@{ $zone->{ns} }) {
-        add_rr($nda_zone, $domain,
+        $nda_rr->add($nda_zone,
             update => {
                 type  => 'NS',
                 name  => '',
@@ -101,160 +104,5 @@ sub our_to_net_dns {
     return $nda_zone;
 }
 
-=head2 add_rr
-
-Add a Net::DNS::RR object to the zone attribute
-
-Returns: true when successful, false otherwise
-
-=cut
-
-sub add_rr {
-    my ($zone, $domain, $section, $rr) = @_;
-
-    #$self->log('add_arr(): ' . dump($section, $rr)) if $self->debug;
-
-    return
-        unless $section =~
-        m/^(header|question|answer|pre|prereq|authority|update|additional)$/;
-
-    given ($rr->{type}) {
-        when (/^SOA$/i) {
-            $zone->push(
-                $section => Net::DNS::RR->new(
-                    name => (
-                          $rr->{name}
-                        ? $rr->{name} . '.' . $domain
-                        : $domain
-                    ),
-                    mname   => $rr->{ns}->[0],
-                    rname   => $rr->{email},
-                    serial  => $rr->{serial} || time,
-                    retry   => $rr->{retry},
-                    refresh => $rr->{refresh},
-                    expire  => $rr->{expire},
-                    minimum => $rr->{ttl},
-                    type    => $rr->{type},
-                ));
-            return 1;
-        }
-        when (/^A{1,4}$/i) {
-            $zone->push(
-                $section => Net::DNS::RR->new(
-                    name => (
-                          $rr->{name}
-                        ? $rr->{name} . '.' . $domain
-                        : $domain
-                    ),
-                    class   => 'IN',
-                    ttl     => $rr->{ttl} || 3600,
-                    type    => $rr->{type},
-                    address => $rr->{value},
-                ));
-            return 1;
-        }
-        when (/^CNAME$/i) {
-            $zone->push(
-                $section => Net::DNS::RR->new(
-                    name => (
-                          $rr->{name}
-                        ? $rr->{name} . '.' . $domain
-                        : $domain
-                    ),
-                    class => 'IN',
-                    ttl   => $rr->{ttl} || 3600,
-                    type  => $rr->{type},
-                    cname => $rr->{value},
-                ));
-            return 1;
-        }
-        when (/^MX$/i) {
-            $zone->push(
-                $section => Net::DNS::RR->new(
-                    name => (
-                          $rr->{name}
-                        ? $rr->{name} . '.' . $domain
-                        : $domain
-                    ),
-                    class      => 'IN',
-                    ttl        => $rr->{ttl} || 14400,
-                    type       => $rr->{type},
-                    exchange   => $rr->{value},
-                    preference => $rr->{prio},
-                ));
-            return 1;
-        }
-        when (/^SRV$/i) {
-            my ($weight, $port, $target) = split(/\s/, $rr->{value}, 3);
-
-            $zone->push(
-                $section => Net::DNS::RR->new(
-                    name => (
-                          $rr->{name}
-                        ? $rr->{name} . '.' . $domain
-                        : $domain
-                    ),
-                    class    => 'IN',
-                    ttl      => $rr->{ttl} || 14400,
-                    type     => $rr->{type},
-                    target   => $target,
-                    weight   => $weight,
-                    port     => $port,
-                    priority => $rr->{prio},
-                ));
-            return 1;
-        }
-        when (/^TXT$/i) {
-
-            # split too long TXT records into multiple records on word boundary
-            # limit: 255 chars
-            # FIXME this currently breaks SPF records as it cuts off the
-            # trailing '~all'. temporarily disabled by [norbu09]
-            #my @txts = $rr->{value} =~ /(.{1,255})\W/gms;
-
-            #foreach my $txt (@txts) {
-            $zone->push(
-                $section => Net::DNS::RR->new(
-                    name => (
-                          $rr->{name}
-                        ? $rr->{name} . '.' . $domain
-                        : $domain
-                    ),
-                    class   => 'IN',
-                    ttl     => $rr->{ttl} || 3600,
-                    type    => $rr->{type},
-                    txtdata => $rr->{value},
-                ));
-
-            #}
-
-            return 1;
-        }
-        when (/^NS$/i) {
-            $zone->push(
-                $section => Net::DNS::RR->new(
-                    name => (
-                          $rr->{name}
-                        ? $rr->{name} . '.' . $domain
-                        : $domain
-                    ),
-                    class   => 'IN',
-                    ttl     => $rr->{ttl} || 14400,
-                    type    => $rr->{type},
-                    nsdname => $rr->{value},
-                ));
-            return 1;
-        }
-        default {
-            warn('add_arr(): '
-                    . $domain
-                    . ": unsupported record type: "
-                    . $rr->{type});
-            return;
-        }
-    }
-
-    return;
-}
 
 1;

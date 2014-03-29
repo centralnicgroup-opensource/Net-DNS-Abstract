@@ -1,8 +1,10 @@
 package Net::DNS::Abstract::Plugins::Internetx;
 
 use 5.010;
+use lib 'lib';
 use Any::Moose 'Role';
 use Net::DNS;
+use Net::DNS::Abstract::RR;
 
 # ABSTRACT: wrapper interface for InternetX
 
@@ -166,8 +168,9 @@ sub _parse_ix {
     $self->domain($zone->{name}->{content});
     $self->zone(Net::DNS::Packet->new($self->domain, 'AXFR'));
 
+    my $nda_rr = Net::DNS::Abstract::RR->new(domain => $self->domain);
     # add SOA first
-    $self->add_rr(
+    $nda_rr->add(
         answer => {
             type    => 'SOA',
             name    => '',
@@ -188,7 +191,7 @@ sub _parse_ix {
                 if ($rr->{name}->{content} eq $self->domain);
             $rr->{value}->{content} =~ s/\.+$//;
 
-            $self->add_rr(
+            $nda_rr->add(
                 answer => {
                     ttl => $rr->{ttl}->{content} || 3600,
                     name  => $rr->{name}->{content},
@@ -205,7 +208,7 @@ sub _parse_ix {
             if ($zone->{rr}->{name}->{content} eq $self->domain);
         $zone->{rr}->{value}->{content} =~ s/\.+$//;
 
-        $self->add_rr(
+        $nda_rr->add(
             answer => {
                 ttl => $zone->{rr}->{ttl}->{content} || 3600,
                 name  => $zone->{rr}->{name}->{content},
@@ -216,7 +219,7 @@ sub _parse_ix {
     }
 
     if ($zone->{main}) {
-        $self->add_rr(
+        $nda_rr->add(
             answer => {
                 ttl => $zone->{main}->{ttl}->{content} || 3600,
                 name  => '',
@@ -247,7 +250,7 @@ sub _parse_ix {
 
     my @ns;
     foreach my $ns (@{ $zone->{nserver} }) {
-        $self->add_rr(
+        $nda_rr->add(
             answer => {
                 value => $ns->{name}->{content},
                 type  => 'NS'
