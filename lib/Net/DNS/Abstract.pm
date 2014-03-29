@@ -1,12 +1,18 @@
 package Net::DNS::Abstract;
 
+use lib 'lib';
 use 5.010;
-use Any::Moose;
+use Mouse;
 use Module::Load;
 use Net::DNS;
 use Net::DNS::Packet;
 use Net::DNS::ZoneFile::Fast;
+use Net::DNS::Abstract::Types qw/Zone/;
 use Data::Dump 'dump';
+
+use overload 
+    '""' => sub { shift->to_string },
+    'eq' => sub { shift->string_eq };
 
 # ABSTRACT: Net::DNS interface to several DNS backends via API
 
@@ -46,13 +52,15 @@ has 'domain' => (
 
 =head2 zone
 
-the Net::DNS::Packet object of the underlaying zone
+the Net::DNS::Packet object of the underlaying zone including a subtype
+to convert between formats to Net::DNS
 
 =cut
 
 has 'zone' => (
     is      => 'rw',
-    isa     => 'Net::DNS::Packet',
+    isa     => 'Zone',
+    coerce => 1,
     default => sub { Net::DNS::Packet->new },
 );
 
@@ -66,7 +74,7 @@ has 'interface' => (
     is       => 'rw',
     isa      => 'Str',
     required => 1,
-    default => 'internal',
+    default  => 'internal',
 );
 
 before 'new' => sub {
@@ -74,9 +82,10 @@ before 'new' => sub {
 
     if (exists $args{interface}) {
         push(@{ $args{preload} }, $args{interface})
-        # TODO write some sanitisation stuff with internal conversions
-        # of our hash into a Net::DNS structure. We need this for hash
-        # -> zonefile conversions
+
+            # TODO write some sanitisation stuff with internal conversions
+            # of our hash into a Net::DNS structure. We need this for hash
+            # -> zonefile conversions
             unless $args{interface} eq 'internal';
     }
 
@@ -119,7 +128,7 @@ sub update {
         return;
     }
 
-    $self->anything_to_net_dns($zone);
+    $self->zone($zone);
     return;
 }
 
@@ -201,14 +210,55 @@ Returns: Net::DNS::Packet object representation of the zone or undef on error
 sub zonefile_to_net_dns {
     my ($self, $zonefile) = @_;
 
-    
-    $self->log('zonefile_to_net_dns(): Domain is: ' . $self->domain) if $self->debug;
-    $self->log('zonefile_to_net_dns(): Zonefile is: ' . $zonefile) if $self->debug;
+    $self->log('zonefile_to_net_dns(): Domain is: ' . $self->domain)
+        if $self->debug;
+    $self->log('zonefile_to_net_dns(): Zonefile is: ' . $zonefile)
+        if $self->debug;
     $self->zone(Net::DNS::Packet->new($self->domain));
     my $zone = Net::DNS::ZoneFile::Fast::parse($zonefile);
     $self->zone->push(update => @$zone);
 
     return $self->zone;
+}
+
+=head2 to_string
+
+Converts a Net::DNS object into a flat zonefile without comments and
+empty lines. This is an alternative to calling $nda->string
+
+This function returns a zonefile string
+
+=cut
+
+sub to_string {
+    my ($self) = @_;
+
+    # strip out comments and empty lines
+    my $zonefile;
+    my @zone = split(/\n/, $self->zone->string);
+    foreach my $line (@zone) {
+        next if $line =~ m{^$};
+        next if $line =~ m{^;};
+        $zonefile .= $line . "\n";
+    }
+
+    return $zonefile;
+}
+
+=head2 string_eq
+
+Overloading endpoint for string comparison of two Net::DNS::Abstract
+objects
+
+This function returns a zonefile string
+
+=cut
+
+sub string_eq {
+    my ($self) = @_;
+
+    my $zone = $self->to_string;
+    return $zone =~ s{\s+}{}gmx;
 }
 
 =head2 add_rr
@@ -323,19 +373,20 @@ sub add_rr {
             #my @txts = $rr->{value} =~ /(.{1,255})\W/gms;
 
             #foreach my $txt (@txts) {
-                $self->zone->push(
-                    $section => Net::DNS::RR->new(
-                        name => (
-                              $rr->{name}
-                            ? $rr->{name} . '.' . $self->domain
-                            : $self->domain
-                        ),
-                        class   => 'IN',
-                        ttl     => $rr->{ttl} || 3600,
-                        type    => $rr->{type},
-                        txtdata => $rr->{value},
-                    ));
-                #}
+            $self->zone->push(
+                $section => Net::DNS::RR->new(
+                    name => (
+                          $rr->{name}
+                        ? $rr->{name} . '.' . $self->domain
+                        : $self->domain
+                    ),
+                    class   => 'IN',
+                    ttl     => $rr->{ttl} || 3600,
+                    type    => $rr->{type},
+                    txtdata => $rr->{value},
+                ));
+
+            #}
 
             return 1;
         }
@@ -408,14 +459,16 @@ sub from_net_dns {
                 $self->domain($domain);
             }
             when ('NS') {
+
                 # if we have a NS record for the domain itself we want
                 # it in $zone->{ns} if it is a delegation for a
                 # subdomain we want it in the $zone->{rr} section
-                if($rr->name eq $self->domain){
+                if ($rr->name eq $self->domain) {
                     push(
                         @{ $zone->{ns} },
                         { name => $rr->nsdname, ttl => $rr->ttl });
-                } else {
+                }
+                else {
                     push(
                         @{ $zone->{rr} }, {
                             name => $name || undef,
@@ -481,42 +534,6 @@ sub from_net_dns {
     return $zone;
 }
 
-=head2 anything_to_net_dns
-
-Convert a Zonefile or our internal hash representation to a Net::DNS
-object
-
-=cut
-
-sub anything_to_net_dns {
-    my ($self, $zone) = @_;
-
-    unless (defined $zone) {
-        $self->log('anything_to_net_dns(): missing "zone" parameter');
-        return;
-    }
-
-    given (ref $zone) {
-        when ('HASH') {
-            $self->log('anything_to_net_dns(): zone has HASH format') if $self->debug;
-            return $self->our_to_net_dns($zone);
-        }
-        when ('') {
-            $self->log('anything_to_net_dns(): zone is a Zonefile string') if $self->debug;
-            return $self->zonefile_to_net_dns($zone);
-        }
-        when ('Net::DNS::Packet') {
-            $self->log('anything_to_net_dns(): zone is Net::DNS::Packet format')
-                if $self->debug;
-            return $self->zone($zone);
-        }
-        default {
-            $self->log('anything_to_net_dns(): unknown zone format');
-        }
-    }
-    return;
-}
-
 =head2 log
 
 print log message to STDERR including this module's name
@@ -548,8 +565,8 @@ sub sanitise_zone {
     my ($self, $zone) = @_;
 
     my $c = 0;
-    foreach my $rr (@{$zone->{rr}}){
-        delete $zone->[$c] 
+    foreach my $rr (@{ $zone->{rr} }) {
+        delete $zone->[$c];
     }
 }
 
@@ -557,9 +574,9 @@ sub sanitise_zone {
 sub _check_for_dupes {
     my ($zone, $record) = @_;
 
-    foreach my $rr (@{$zone}){
+    foreach my $rr (@{$zone}) {
         my $c = 0;
-        foreach my $ky (keys %{$rr}){
+        foreach my $ky (keys %{$rr}) {
             $c++;
             next unless exists $record->{$ky};
             next unless uc($rr->{$ky}) eq uc($record->{$ky});
