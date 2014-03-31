@@ -12,7 +12,8 @@ use Data::Dump 'dump';
 
 use overload 
     '""' => sub { shift->to_string },
-    'eq' => sub { shift->string_eq };
+    'eq' => sub { shift->string_eq },
+    'ne' => sub { shift->string_eq };
 
 # ABSTRACT: Net::DNS interface to several DNS backends via API
 
