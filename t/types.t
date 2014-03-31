@@ -82,6 +82,8 @@ is_string_nows($dns, $zone, "round trip the zonefile");
  
 # test stringification
 is($dns, $dns2, "compare two DNS zones");
+my $dns_append = $dns . 'some random string here';
+isnt($dns, $dns_append, "compare two DNS zones for inequality");
 
 # test hash export
 my $hash = $dns->to_hash;
