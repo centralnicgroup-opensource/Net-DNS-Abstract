@@ -191,7 +191,7 @@ sub _parse_ix {
                 if ($rr->{name}->{content} eq $self->domain);
             $rr->{value}->{content} =~ s/\.+$//;
 
-            $nda_zone = $nda_rr->add($nda_zone,
+            my $tmp_nda_zone = $nda_rr->add($nda_zone,
                 answer => {
                     ttl => $rr->{ttl}->{content} || 3600,
                     name  => $rr->{name}->{content},
@@ -199,6 +199,7 @@ sub _parse_ix {
                     type  => uc($rr->{type}->{content}),
                     prio  => $rr->{pref}->{content} || undef,
                 });
+            $nda_zone = $tmp_nda_zone if $tmp_nda_zone;
         }
     }
     else {
@@ -209,7 +210,7 @@ sub _parse_ix {
         $zone->{rr}->{value}->{content} =~ s/\.+$//
             if exists $zone->{rr}->{value}->{content};
 
-        $nda_zone = $nda_rr->add($nda_zone,
+        my $tmp_nda_zone = $nda_rr->add($nda_zone,
             answer => {
                 ttl => $zone->{rr}->{ttl}->{content} || 3600,
                 name  => $zone->{rr}->{name}->{content},
@@ -217,16 +218,18 @@ sub _parse_ix {
                 type  => uc($zone->{rr}->{type}->{content}),
                 prio  => $zone->{rr}->{pref}->{content} || undef,
             });
+        $nda_zone = $tmp_nda_zone if $tmp_nda_zone;
     }
 
     if ($zone->{main}) {
-        $nda_zone = $nda_rr->add($nda_zone,
+        my $tmp_nda_zone = $nda_rr->add($nda_zone,
             answer => {
                 ttl => $zone->{main}->{ttl}->{content} || 3600,
                 name  => '',
                 value => $zone->{main}->{value}->{content},
                 type  => 'A',
             });
+        $nda_zone = $tmp_nda_zone if $tmp_nda_zone;
     }
 
     # TODO check if we still want to convert old www_include records or
@@ -251,11 +254,12 @@ sub _parse_ix {
 
     my @ns;
     foreach my $ns (@{ $zone->{nserver} }) {
-        $nda_zone = $nda_rr->add($nda_zone,
+        my $tmp_nda_zone = $nda_rr->add($nda_zone,
             answer => {
                 value => $ns->{name}->{content},
                 type  => 'NS'
             });
+        $nda_zone = $tmp_nda_zone if $tmp_nda_zone;
     }
 
     $self->zone($nda_zone);
