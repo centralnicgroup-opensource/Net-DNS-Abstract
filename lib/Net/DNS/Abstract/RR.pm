@@ -43,7 +43,7 @@ sub add {
                         ? $rr->{name} . '.' . $self->domain
                         : $self->domain
                     ),
-                    mname   => $rr->{ns}->[0],
+                    mname   => $rr->{ns}->[0] || 'ns1.iwantmyname.net',
                     rname   => $rr->{email} || 'info@12idn.com',
                     serial  => $rr->{serial} || time,
                     retry   => $rr->{retry},
