@@ -157,7 +157,7 @@ sub add {
                     class   => 'IN',
                     ttl     => $rr->{ttl} || 14400,
                     type    => $rr->{type},
-                    nsdname => $rr->{value},
+                    nsdname => $rr->{value} || 'ns1.iwantmyname.net',
                 ));
             return $zone;
         }
