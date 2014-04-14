@@ -206,7 +206,8 @@ sub _parse_ix {
             unless exists $zone->{rr}->{name}->{content};
         $zone->{rr}->{name}->{content} = ''
             if ($zone->{rr}->{name}->{content} eq $self->domain);
-        $zone->{rr}->{value}->{content} =~ s/\.+$//;
+        $zone->{rr}->{value}->{content} =~ s/\.+$//
+            if exists $zone->{rr}->{value}->{content};
 
         $nda_zone = $nda_rr->add($nda_zone,
             answer => {
