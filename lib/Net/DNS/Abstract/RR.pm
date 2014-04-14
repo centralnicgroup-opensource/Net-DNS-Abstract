@@ -44,7 +44,7 @@ sub add {
                         : $self->domain
                     ),
                     mname   => $rr->{ns}->[0],
-                    rname   => $rr->{email},
+                    rname   => $rr->{email} || 'email@domain.tld',
                     serial  => $rr->{serial} || time,
                     retry   => $rr->{retry},
                     refresh => $rr->{refresh},
