@@ -5,6 +5,8 @@ use lib 'lib';
 use Any::Moose 'Role';
 use Net::DNS;
 use Net::DNS::Abstract::RR;
+use Try::Tiny;
+use Data::Printer;
 
 # ABSTRACT: wrapper interface for InternetX
 
@@ -169,19 +171,26 @@ sub _parse_ix {
     my $nda_zone = Net::DNS::Packet->new($self->domain, 'AXFR');
 
     my $nda_rr = Net::DNS::Abstract::RR->new(domain => $self->domain);
+
     # add SOA first
-    $nda_zone = $nda_rr->add($nda_zone,
-        answer => {
-            type    => 'SOA',
-            name    => '',
-            serial  => time,
-            ns      => [ $zone->{nserver}->[0]->{name}->{content} ],
-            email   => $zone->{soa}->{email}->{content},
-            retry   => $zone->{soa}->{retry}->{content},
-            refresh => $zone->{soa}->{refresh}->{content},
-            expire  => $zone->{soa}->{expire}->{content},
-            ttl     => $zone->{soa}->{ttl}->{content},
-        });
+    try {
+        $nda_zone = $nda_rr->add(
+            $nda_zone,
+            answer => {
+                type    => 'SOA',
+                name    => '',
+                serial  => time,
+                ns      => [ $zone->{nserver}->[0]->{name}->{content} ],
+                email   => $zone->{soa}->{email}->{content},
+                retry   => $zone->{soa}->{retry}->{content},
+                refresh => $zone->{soa}->{refresh}->{content},
+                expire  => $zone->{soa}->{expire}->{content},
+                ttl     => $zone->{soa}->{ttl}->{content},
+            });
+    }
+    catch {
+        warn "Could not add SOA record: " . p($zone);
+    };
 
     if (ref $zone->{rr} eq 'ARRAY') {
         foreach my $rr (@{ $zone->{rr} }) {
@@ -191,14 +200,21 @@ sub _parse_ix {
                 if ($rr->{name}->{content} eq $self->domain);
             $rr->{value}->{content} =~ s/\.+$//;
 
-            my $tmp_nda_zone = $nda_rr->add($nda_zone,
-                answer => {
-                    ttl => $rr->{ttl}->{content} || 3600,
-                    name  => $rr->{name}->{content},
-                    value => $rr->{value}->{content},
-                    type  => uc($rr->{type}->{content}),
-                    prio  => $rr->{pref}->{content} || undef,
-                });
+            my $tmp_nda_zone;
+            try {
+                $tmp_nda_zone = $nda_rr->add(
+                    $nda_zone,
+                    answer => {
+                        ttl => $rr->{ttl}->{content} || 3600,
+                        name  => $rr->{name}->{content},
+                        value => $rr->{value}->{content},
+                        type  => uc($rr->{type}->{content}),
+                        prio  => $rr->{pref}->{content} || undef,
+                    });
+            }
+            catch {
+                warn "Could not add RR " . p($rr);
+            };
             $nda_zone = $tmp_nda_zone if $tmp_nda_zone;
         }
     }
@@ -210,25 +226,39 @@ sub _parse_ix {
         $zone->{rr}->{value}->{content} =~ s/\.+$//
             if exists $zone->{rr}->{value}->{content};
 
-        my $tmp_nda_zone = $nda_rr->add($nda_zone,
-            answer => {
-                ttl => $zone->{rr}->{ttl}->{content} || 3600,
-                name  => $zone->{rr}->{name}->{content},
-                value => $zone->{rr}->{value}->{content},
-                type  => uc($zone->{rr}->{type}->{content}),
-                prio  => $zone->{rr}->{pref}->{content} || undef,
-            });
+        my $tmp_nda_zone;
+        try {
+            $tmp_nda_zone = $nda_rr->add(
+                $nda_zone,
+                answer => {
+                    ttl => $zone->{rr}->{ttl}->{content} || 3600,
+                    name  => $zone->{rr}->{name}->{content},
+                    value => $zone->{rr}->{value}->{content},
+                    type  => uc($zone->{rr}->{type}->{content}),
+                    prio  => $zone->{rr}->{pref}->{content} || undef,
+                });
+        }
+        catch {
+            warn "Could not add RR " . p($zone);
+        };
         $nda_zone = $tmp_nda_zone if $tmp_nda_zone;
     }
 
     if ($zone->{main}) {
-        my $tmp_nda_zone = $nda_rr->add($nda_zone,
-            answer => {
-                ttl => $zone->{main}->{ttl}->{content} || 3600,
-                name  => '',
-                value => $zone->{main}->{value}->{content},
-                type  => 'A',
-            });
+        my $tmp_nda_zone;
+        try {
+            $tmp_nda_zone = $nda_rr->add(
+                $nda_zone,
+                answer => {
+                    ttl => $zone->{main}->{ttl}->{content} || 3600,
+                    name  => '',
+                    value => $zone->{main}->{value}->{content},
+                    type  => 'A',
+                });
+        }
+        catch {
+            warn "Could not add RR " . p($zone->{main});
+        };
         $nda_zone = $tmp_nda_zone if $tmp_nda_zone;
     }
 
@@ -254,11 +284,18 @@ sub _parse_ix {
 
     my @ns;
     foreach my $ns (@{ $zone->{nserver} }) {
-        my $tmp_nda_zone = $nda_rr->add($nda_zone,
-            answer => {
-                value => $ns->{name}->{content},
-                type  => 'NS'
-            });
+        my $tmp_nda_zone;
+        try {
+            $tmp_nda_zone = $nda_rr->add(
+                $nda_zone,
+                answer => {
+                    value => $ns->{name}->{content},
+                    type  => 'NS'
+                });
+        }
+        catch {
+            warn "Could not add NS " . p($ns);
+        };
         $nda_zone = $tmp_nda_zone if $tmp_nda_zone;
     }
 

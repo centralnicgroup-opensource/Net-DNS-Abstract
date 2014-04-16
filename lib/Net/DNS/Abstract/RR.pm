@@ -44,7 +44,7 @@ sub add {
                         : $self->domain
                     ),
                     mname   => $rr->{ns}->[0] || 'ns1.iwantmyname.net',
-                    rname   => $rr->{email} || 'email@domain.tld',
+                    rname   => $rr->{email} || 'hostmaster@iwantmyname.com',
                     serial  => $rr->{serial} || time,
                     retry   => $rr->{retry},
                     refresh => $rr->{refresh},
