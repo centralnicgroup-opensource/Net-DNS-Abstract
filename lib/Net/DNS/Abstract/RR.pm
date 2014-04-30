@@ -1,8 +1,9 @@
 package Net::DNS::Abstract::RR;
 
 use 5.010;
-use Mouse;
 
+use Mouse;
+use experimental 'smartmatch';
 
 =head2 domain
 
@@ -15,7 +16,6 @@ has 'domain' => (
     isa      => 'Str',
     required => 1,
 );
-
 
 =head2 add
 
@@ -43,10 +43,10 @@ sub add {
                         ? $rr->{name} . '.' . $self->domain
                         : $self->domain
                     ),
-                    mname   => $rr->{ns}->[0] || 'ns1.iwantmyname.net',
-                    rname   => $rr->{email} || 'hostmaster@iwantmyname.com',
-                    serial  => $rr->{serial} || time,
-                    retry   => $rr->{retry},
+                    mname  => $rr->{ns}->[0] || 'ns1.iwantmyname.net',
+                    rname  => $rr->{email}   || 'hostmaster@iwantmyname.com',
+                    serial => $rr->{serial}  || time,
+                    retry  => $rr->{retry},
                     refresh => $rr->{refresh},
                     expire  => $rr->{expire},
                     minimum => $rr->{ttl},
@@ -162,7 +162,7 @@ sub add {
             return $zone;
         }
         default {
-            warn('add_arr(): '
+            warn(     'add_arr(): '
                     . $self->domain
                     . ": unsupported record type: "
                     . $rr->{type});

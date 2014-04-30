@@ -1,6 +1,7 @@
 package Net::DNS::Abstract::Plugins::Daemonise;
 
 use 5.010;
+
 use Any::Moose 'Role';
 
 # ABSTRACT: interface to Daemonise

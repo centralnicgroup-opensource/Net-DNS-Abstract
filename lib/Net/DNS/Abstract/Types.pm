@@ -1,29 +1,28 @@
 package Net::DNS::Abstract::Types;
 
 use 5.010;
-use lib 'lib';
-use Net::DNS::ZoneFile::Fast;
-use Net::DNS::Packet;
-use Net::DNS::Abstract::RR;
 
 use Mouse::Util::TypeConstraints;
 use MouseX::Types -declare => [qw(Zone)];
 use MouseX::Types::Mouse;
+use Net::DNS::ZoneFile::Fast;
+use Net::DNS::Packet;
+use Data::Dump 'dump';
 
-use experimental 'smartmatch';
+use lib 'lib';
+use Net::DNS::Abstract::RR;
 
-use Data::Dump qw/dump/;
-
-type 'Zone',
-    as class_type('Net::DNS::Packet'),
+type 'Zone', as class_type('Net::DNS::Packet'),
     message { "$_ is not a Net::DNS::Packet" };
 
-subtype Zone,     as 'Zone';
+subtype Zone, as 'Zone';
 
-for my $type ( 'Zone', Zone ) {
-    coerce($type, 
-        from 'Str',     via { zonefile_to_net_dns($_); },
-        from 'HashRef', via { our_to_net_dns($_); },
+for my $type ('Zone', Zone) {
+    coerce(
+        $type, from 'Str',
+        via { zonefile_to_net_dns($_); },
+        from 'HashRef',
+        via { our_to_net_dns($_); },
     );
 }
 
@@ -41,7 +40,7 @@ sub zonefile_to_net_dns {
     my $zone = Net::DNS::ZoneFile::Fast::parse($zonefile);
     return unless $zone;
     my $domain;
-    foreach my $rr (@{$zone}){
+    foreach my $rr (@{$zone}) {
         next unless $rr->isa('Net::DNS::RR::SOA');
         $domain = $rr->name;
         last;
@@ -69,8 +68,10 @@ sub our_to_net_dns {
     my $nda_zone = Net::DNS::Packet->new($domain, 'IN', 'SOA');
 
     my $nda_rr = Net::DNS::Abstract::RR->new(domain => $domain);
+
     # TODO this SOA record needs cleanup and debugging!
-    $nda_zone = $nda_rr->add($nda_zone,
+    $nda_zone = $nda_rr->add(
+        $nda_zone,
         update => {
             type    => 'SOA',
             name    => '',
@@ -90,7 +91,8 @@ sub our_to_net_dns {
 
     # convert NS section
     foreach my $rr (@{ $zone->{ns} }) {
-        $nda_zone = $nda_rr->add($nda_zone,
+        $nda_zone = $nda_rr->add(
+            $nda_zone,
             update => {
                 type  => 'NS',
                 name  => '',
@@ -103,6 +105,5 @@ sub our_to_net_dns {
 
     return $nda_zone;
 }
-
 
 1;
