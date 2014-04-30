@@ -1,16 +1,20 @@
 package Net::DNS::Abstract;
 
-use lib 'lib';
 use 5.010;
+
 use Mouse;
 use Module::Load;
 use Net::DNS;
 use Net::DNS::Packet;
 use Net::DNS::ZoneFile::Fast;
-use Net::DNS::Abstract::Types qw/Zone/;
 use Data::Dump 'dump';
 
-use overload 
+use lib 'lib';
+use Net::DNS::Abstract::Types qw/Zone/;
+
+use experimental 'smartmatch';
+
+use overload
     '""' => sub { shift->to_string },
     'eq' => sub { shift->string_eq },
     'ne' => sub { shift->string_eq };
@@ -61,7 +65,7 @@ to convert between formats to Net::DNS
 has 'zone' => (
     is      => 'rw',
     isa     => 'Zone',
-    coerce => 1,
+    coerce  => 1,
     default => sub { Net::DNS::Packet->new },
 );
 
@@ -148,7 +152,6 @@ Delete a zone from a DNS backend
 =cut
 
 sub delete { }    ## no critic (ProhibitBuiltinHomonyms)
-
 
 =head2 to_string
 

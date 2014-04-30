@@ -1,12 +1,16 @@
 package Net::DNS::Abstract::Plugins::Internetx;
 
 use 5.010;
-use lib 'lib';
+
 use Any::Moose 'Role';
 use Net::DNS;
-use Net::DNS::Abstract::RR;
 use Try::Tiny;
 use Data::Printer;
+
+use lib 'lib';
+use Net::DNS::Abstract::RR;
+
+use experimental 'smartmatch';
 
 # ABSTRACT: wrapper interface for InternetX
 
