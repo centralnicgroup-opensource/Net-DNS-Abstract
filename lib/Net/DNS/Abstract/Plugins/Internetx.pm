@@ -1,6 +1,6 @@
 package Net::DNS::Abstract::Plugins::Internetx;
 
-use 5.010;
+use Modern::Perl;
 
 use Any::Moose 'Role';
 use Net::DNS;

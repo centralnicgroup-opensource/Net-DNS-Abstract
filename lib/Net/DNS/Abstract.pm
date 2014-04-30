@@ -1,6 +1,6 @@
 package Net::DNS::Abstract;
 
-use 5.010;
+use Modern::Perl;
 
 use Mouse;
 use Module::Load;
