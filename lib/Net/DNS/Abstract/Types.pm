@@ -12,6 +12,8 @@ use Data::Dump 'dump';
 use lib 'lib';
 use Net::DNS::Abstract::RR;
 
+# ABSTRACT: Net::DNS::Abstract type definitions and methods
+
 type 'Zone', as class_type('Net::DNS::Packet'),
     message { "$_ is not a Net::DNS::Packet" };
 

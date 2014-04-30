@@ -5,6 +5,8 @@ use 5.010;
 use Mouse;
 use experimental 'smartmatch';
 
+# ABSTRACT: Net::DNS::Abstract Resource Record methods
+
 =head2 domain
 
 the domain as a punycode string of the underlaying zone (required)
