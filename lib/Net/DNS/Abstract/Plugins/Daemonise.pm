@@ -1,6 +1,6 @@
 package Net::DNS::Abstract::Plugins::Daemonise;
 
-use 5.010;
+use Modern::Perl;
 
 use Any::Moose 'Role';
 

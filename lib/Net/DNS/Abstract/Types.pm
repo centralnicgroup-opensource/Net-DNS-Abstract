@@ -1,8 +1,7 @@
 package Net::DNS::Abstract::Types;
 
-use 5.010;
-use strict;
-use warnings;
+use Modern::Perl;
+
 use Mouse::Util::TypeConstraints;
 use MouseX::Types -declare => [qw(Zone)];
 use MouseX::Types::Mouse;

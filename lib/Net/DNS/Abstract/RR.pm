@@ -1,6 +1,6 @@
 package Net::DNS::Abstract::RR;
 
-use 5.010;
+use Modern::Perl;
 
 use Mouse;
 use experimental 'smartmatch';
