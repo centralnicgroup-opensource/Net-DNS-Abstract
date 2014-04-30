@@ -500,6 +500,8 @@ sub sanitise_zone {
     foreach my $rr (@{ $zone->{rr} }) {
         delete $zone->[$c];
     }
+
+    return;
 }
 
 # TODO we may have to do more here like make sure all keys have the same case.
@@ -516,6 +518,8 @@ sub _check_for_dupes {
         }
         return 1 if $c == 0;
     }
+
+    return;
 }
 
 1;
