@@ -1,0 +1,10 @@
+severity = 4
+
+[TestingAndDebugging::RequireUseStrict]
+equivalent_modules = Mouse Mouse::Util::TypeConstraints Modern::Perl
+
+[TestingAndDebugging::RequireUseWarnings]
+equivalent_modules = Mouse Mouse::Util::TypeConstraints Modern::Perl
+
+[Documentation::PodSpelling]
+spell_command = aspell list
