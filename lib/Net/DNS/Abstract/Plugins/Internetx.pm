@@ -106,7 +106,7 @@ around 'update' => sub {
 
     my $hash = {
         command => 'update_zone',
-        options => $self->from_net_dns,
+        options => $self->to_hash,
     };
     $hash->{options}->{interface} = 'internetx';
 
