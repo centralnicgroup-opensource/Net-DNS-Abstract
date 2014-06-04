@@ -470,7 +470,7 @@ sub to_hash {
                    $a->{type} cmp $b->{type}
                 || $a->{prio} <=> $b->{prio}
                 || $a->{name} cmp $b->{name}
-        } @{ $zone->{rr} } ];
+        } @{ $zone->{rr} } ] if $zone->{rr};
 
     return $zone;
 }
