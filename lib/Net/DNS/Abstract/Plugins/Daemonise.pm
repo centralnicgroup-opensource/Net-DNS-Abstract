@@ -25,20 +25,6 @@ has 'transport' => (
     required => 1,
 );
 
-=head2 platform
-
-Daemonise platform variable
-
-default: iwmn
-
-=cut
-
-has 'platform' => (
-    is      => 'rw',
-    isa     => 'Str',
-    default => sub { 'iwmn' },
-);
-
 =head1 SUBROUTINES/METHODS
 
 =head2 daemonise
@@ -66,15 +52,10 @@ sub ask {
         $self->daemonise->log("No Backend interface defined!");
         return;
     }
-    my $frame = {
-        meta => {
-            platform => $self->platform,
-            lang     => 'en',
-        },
-        data => $hash,
-    };
-    my $q = 'interface.' . $hash->{options}->{interface};
-    my $res = $self->daemonise->queue($q, $frame);
+
+    my $frame = { data => $hash };
+    my $q     = 'interface.' . $hash->{options}->{interface};
+    my $res   = $self->daemonise->queue($q, $frame);
 
     return $res;
 }
