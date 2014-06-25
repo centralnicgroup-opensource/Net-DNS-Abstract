@@ -22,6 +22,7 @@ transport layer object, has to be a Daemonise object.
 has 'transport' => (
     is       => 'rw',
     isa      => 'Daemonise',
+    lazy     => 1,
     required => 1,
 );
 
