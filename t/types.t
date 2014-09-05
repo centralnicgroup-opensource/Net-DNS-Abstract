@@ -101,5 +101,5 @@ my $dns4 = Net::DNS::Abstract->new(domain => 'lnz.me');
 my $f = $dns4->zone($e);
 ok($f, "loaded NDA zone as zone");
 is($dns, $dns4, "compare two DNS zones");
-
+};
 done_testing();
