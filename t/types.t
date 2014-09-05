@@ -7,9 +7,9 @@ use lib 'lib';
 
 BEGIN { use_ok('Net::DNS::Abstract'); }
 
-#subtest 'Author Tests', sub {
-#    plan skip_all => 'Author test. Set $ENV{TEST_AUTHOR} to a true value to run.'
-#    if (not $ENV{TEST_AUTHOR});
+subtest 'Author Tests', sub {
+    plan skip_all => 'Author test. Set $ENV{TEST_AUTHOR} to a true value to run.'
+    if (not $ENV{TEST_AUTHOR});
 
 my $zone = 'lnz.me. 3600   IN  SOA ns1.iwantmyname.net. info.12idn.com. (
                     1395960805  ;serial
