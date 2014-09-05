@@ -190,164 +190,10 @@ sub string_eq {
     my ($self) = @_;
 
     my $zone = $self->to_string;
+    return unless $zone;
     return $zone =~ s{\s+}{}gmx;
 }
 
-#=head2 add_rr
-#
-#Add a Net::DNS::RR object to the zone attribute
-#
-#Returns: true when successful, false otherwise
-#
-#=cut
-#
-#sub add_rr {
-#    my ($self, $section, $rr) = @_;
-#
-#    $self->log('add_arr(): ' . dump($section, $rr)) if $self->debug;
-#
-#    return
-#        unless $section =~
-#        m/^(header|question|answer|pre|prereq|authority|update|additional)$/;
-#
-#    given ($rr->{type}) {
-#        when (/^SOA$/i) {
-#            $self->zone->push(
-#                $section => Net::DNS::RR->new(
-#                    name => (
-#                          $rr->{name}
-#                        ? $rr->{name} . '.' . $self->domain
-#                        : $self->domain
-#                    ),
-#                    mname   => $rr->{ns}->[0],
-#                    rname   => $rr->{email},
-#                    serial  => $rr->{serial} || time,
-#                    retry   => $rr->{retry},
-#                    refresh => $rr->{refresh},
-#                    expire  => $rr->{expire},
-#                    minimum => $rr->{ttl},
-#                    type    => $rr->{type},
-#                ));
-#            return 1;
-#        }
-#        when (/^A{1,4}$/i) {
-#            $self->zone->push(
-#                $section => Net::DNS::RR->new(
-#                    name => (
-#                          $rr->{name}
-#                        ? $rr->{name} . '.' . $self->domain
-#                        : $self->domain
-#                    ),
-#                    class   => 'IN',
-#                    ttl     => $rr->{ttl} || 3600,
-#                    type    => $rr->{type},
-#                    address => $rr->{value},
-#                ));
-#            return 1;
-#        }
-#        when (/^CNAME$/i) {
-#            $self->zone->push(
-#                $section => Net::DNS::RR->new(
-#                    name => (
-#                          $rr->{name}
-#                        ? $rr->{name} . '.' . $self->domain
-#                        : $self->domain
-#                    ),
-#                    class => 'IN',
-#                    ttl   => $rr->{ttl} || 3600,
-#                    type  => $rr->{type},
-#                    cname => $rr->{value},
-#                ));
-#            return 1;
-#        }
-#        when (/^MX$/i) {
-#            $self->zone->push(
-#                $section => Net::DNS::RR->new(
-#                    name => (
-#                          $rr->{name}
-#                        ? $rr->{name} . '.' . $self->domain
-#                        : $self->domain
-#                    ),
-#                    class      => 'IN',
-#                    ttl        => $rr->{ttl} || 14400,
-#                    type       => $rr->{type},
-#                    exchange   => $rr->{value},
-#                    preference => $rr->{prio},
-#                ));
-#            return 1;
-#        }
-#        when (/^SRV$/i) {
-#            my ($weight, $port, $target) = split(/\s/, $rr->{value}, 3);
-#
-#            $self->zone->push(
-#                $section => Net::DNS::RR->new(
-#                    name => (
-#                          $rr->{name}
-#                        ? $rr->{name} . '.' . $self->domain
-#                        : $self->domain
-#                    ),
-#                    class    => 'IN',
-#                    ttl      => $rr->{ttl} || 14400,
-#                    type     => $rr->{type},
-#                    target   => $target,
-#                    weight   => $weight,
-#                    port     => $port,
-#                    priority => $rr->{prio},
-#                ));
-#            return 1;
-#        }
-#        when (/^TXT$/i) {
-#
-#            # split too long TXT records into multiple records on word boundary
-#            # limit: 255 chars
-#            # FIXME this currently breaks SPF records as it cuts off the
-#            # trailing '~all'. temporarily disabled by [norbu09]
-#            #my @txts = $rr->{value} =~ /(.{1,255})\W/gms;
-#
-#            #foreach my $txt (@txts) {
-#            $self->zone->push(
-#                $section => Net::DNS::RR->new(
-#                    name => (
-#                          $rr->{name}
-#                        ? $rr->{name} . '.' . $self->domain
-#                        : $self->domain
-#                    ),
-#                    class   => 'IN',
-#                    ttl     => $rr->{ttl} || 3600,
-#                    type    => $rr->{type},
-#                    txtdata => $rr->{value},
-#                ));
-#
-#            #}
-#
-#            return 1;
-#        }
-#        when (/^NS$/i) {
-#            $self->zone->push(
-#                $section => Net::DNS::RR->new(
-#                    name => (
-#                          $rr->{name}
-#                        ? $rr->{name} . '.' . $self->domain
-#                        : $self->domain
-#                    ),
-#                    class   => 'IN',
-#                    ttl     => $rr->{ttl} || 14400,
-#                    type    => $rr->{type},
-#                    nsdname => $rr->{value},
-#                ));
-#            return 1;
-#        }
-#        default {
-#            $self->log('add_arr(): '
-#                    . $self->domain
-#                    . ": unsupported record type: "
-#                    . $rr->{type});
-#            return;
-#        }
-#    }
-#
-#    return;
-#}
 
 =head2 to_hash
 
@@ -378,6 +224,7 @@ sub to_hash {
         given ($rr->type) {
             my $name = $rr->name;
             $name =~ s/\.?$domain$//;
+            $name = '' if $name eq '.';
             when ('SOA') {
                 $zone->{soa} = {
                     retry   => $rr->retry,
@@ -386,9 +233,11 @@ sub to_hash {
                     ttl     => $rr->ttl,
                     expire  => $rr->expire,
                 };
-                $zone->{domain} = $rr->name;
-                $domain = $zone->{domain};
-                $self->domain($domain);
+                unless($domain){
+                    $zone->{domain} = $rr->name;
+                    $domain = $zone->{domain};
+                    $self->domain($domain);
+                }
             }
             when ('NS') {
 
@@ -465,6 +314,7 @@ sub to_hash {
 
     # sort records lexicographically by type first
     # then by number of sub records
+    # FIXME: this throws heaps of errors!
     $zone->{rr} = [
         sort {
                    $a->{type} cmp $b->{type}
