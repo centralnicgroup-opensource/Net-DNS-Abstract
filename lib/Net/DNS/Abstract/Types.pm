@@ -40,9 +40,11 @@ sub zonefile_to_net_dns {
     my $zonefile = shift;
 
     my $zone = Net::DNS::ZoneFile::Fast::parse($zonefile);
-    return unless $zone;
+
+    return unless $zone and ref $zone eq 'ARRAY';
+
     my $domain;
-    foreach my $rr (@{$zone}) {
+    foreach my $rr (@$zone) {
         next unless $rr->isa('Net::DNS::RR::SOA');
         $domain = $rr->name;
         last;
