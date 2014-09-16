@@ -134,6 +134,7 @@ sub update {
     }
 
     $self->zone($zone);
+
     return;
 }
 
@@ -166,8 +167,9 @@ sub to_string {
     my ($self) = @_;
 
     # strip out comments and empty lines
-    my $zonefile;
     my @zone = split(/\n/, $self->zone->string);
+
+    my $zonefile;
     foreach my $line (@zone) {
         next if $line =~ m{^$};
         next if $line =~ m{^;};
@@ -193,7 +195,6 @@ sub string_eq {
     return unless $zone;
     return $zone =~ s{\s+}{}gmx;
 }
-
 
 =head2 to_hash
 
@@ -233,7 +234,7 @@ sub to_hash {
                     ttl     => $rr->ttl,
                     expire  => $rr->expire,
                 };
-                unless($domain){
+                unless ($domain) {
                     $zone->{domain} = $rr->name;
                     $domain = $zone->{domain};
                     $self->domain($domain);
@@ -309,7 +310,6 @@ sub to_hash {
                     });
             }
         }
-
     }
 
     # sort records lexicographically by type first
