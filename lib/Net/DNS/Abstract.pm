@@ -219,13 +219,17 @@ sub to_hash {
 
     $self->log("to_hash(): RRs: " . dump(@rrs));
 
-    my $zone;
+    # initialize zone hash
+    my $zone = { domain => $domain };
+
     foreach my $rr (@rrs) {
         $self->log("to_hash(): RR: " . ref($rr));
+
+        my $name = $rr->name;
+        $name =~ s/\.?$domain$//;
+        $name = '' if $name eq '.';
+
         given ($rr->type) {
-            my $name = $rr->name;
-            $name =~ s/\.?$domain$//;
-            $name = '' if $name eq '.';
             when ('SOA') {
                 $zone->{soa} = {
                     retry   => $rr->retry,
