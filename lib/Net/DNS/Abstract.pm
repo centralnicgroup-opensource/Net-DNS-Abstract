@@ -238,6 +238,7 @@ sub to_hash {
                     ttl     => $rr->ttl,
                     expire  => $rr->expire,
                 };
+
                 unless ($domain) {
                     $zone->{domain} = $rr->name;
                     $domain = $zone->{domain};
