@@ -314,13 +314,14 @@ sub to_hash {
 
     # sort records lexicographically by type first
     # then by number of sub records
-    # FIXME: this throws heaps of errors!
-    $zone->{rr} = [
-        sort {
-                   $a->{type} cmp $b->{type}
-                || $a->{prio} <=> $b->{prio}
-                || $a->{name} cmp $b->{name}
-        } @{ $zone->{rr} } ] if $zone->{rr};
+    if ($zone->{rr}) {
+        $zone->{rr} = [
+            sort {
+                       ($a->{type} || "") cmp($b->{type} || "")
+                    || ($a->{prio} || 0) <=> ($b->{prio} || 0)
+                    || ($a->{name} || "") cmp($b->{name} || "")
+            } @{ $zone->{rr} } ];
+    }
 
     return $zone;
 }
