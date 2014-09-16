@@ -168,7 +168,9 @@ sub _parse_ix {
 
     # TODO this should be error handling as Net::DNS expects it!
     return { error => $data } unless $data->{status} eq 'success';
+
     my $zone = $data->{data}->{zone};
+
     return $data unless $zone;
 
     $self->domain($zone->{name}->{content});
@@ -245,6 +247,7 @@ sub _parse_ix {
         catch {
             warn "Could not add RR " . p($zone);
         };
+
         $nda_zone = $tmp_nda_zone if $tmp_nda_zone;
     }
 
@@ -263,6 +266,7 @@ sub _parse_ix {
         catch {
             warn "Could not add RR " . p($zone->{main});
         };
+
         $nda_zone = $tmp_nda_zone if $tmp_nda_zone;
     }
 
@@ -304,6 +308,7 @@ sub _parse_ix {
     }
 
     $self->zone($nda_zone);
+
     return $self->zone;
 }
 
