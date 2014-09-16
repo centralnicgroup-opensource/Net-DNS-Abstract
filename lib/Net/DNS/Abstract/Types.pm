@@ -49,8 +49,10 @@ sub zonefile_to_net_dns {
         $domain = $rr->name;
         last;
     }
+
     my $nd = Net::DNS::Packet->new($domain);
     $nd->push(update => @$zone);
+
     return $nd;
 }
 
@@ -91,6 +93,7 @@ sub our_to_net_dns {
     # convert RR section
     foreach my $rr (@{ $zone->{rr} }) {
         next unless exists $rr->{type};
+
         $nda_zone = $nda_rr->add($nda_zone, update => $rr);
     }
 
