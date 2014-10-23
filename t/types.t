@@ -79,7 +79,7 @@ my $dns2 = Net::DNS::Abstract->new(domain => 'domain.tld');
 my $d = $dns2->zone($zone);
 ok($d, "loaded zonefile as zone");
 is_string_nows($dns, $zone, "round trip the zonefile");
- 
+
 # test stringification
 is($dns, $dns2, "compare two DNS zones");
 my $dns_append = $dns . 'some random string here';

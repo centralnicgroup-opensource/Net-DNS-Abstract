@@ -134,6 +134,7 @@ sub update {
     }
 
     $self->zone($zone);
+
     return;
 }
 
@@ -166,8 +167,9 @@ sub to_string {
     my ($self) = @_;
 
     # strip out comments and empty lines
-    my $zonefile;
     my @zone = split(/\n/, $self->zone->string);
+
+    my $zonefile;
     foreach my $line (@zone) {
         next if $line =~ m{^$};
         next if $line =~ m{^;};
@@ -194,7 +196,6 @@ sub string_eq {
     return $zone =~ s{\s+}{}gmx;
 }
 
-
 =head2 to_hash
 
 Convert a Net::DNS object into our normalized format
@@ -218,13 +219,17 @@ sub to_hash {
 
     $self->log("to_hash(): RRs: " . dump(@rrs));
 
-    my $zone;
+    # initialize zone hash
+    my $zone = { domain => $domain };
+
     foreach my $rr (@rrs) {
         $self->log("to_hash(): RR: " . ref($rr));
+
+        my $name = $rr->name;
+        $name =~ s/\.?$domain$//;
+        $name = '' if $name eq '.';
+
         given ($rr->type) {
-            my $name = $rr->name;
-            $name =~ s/\.?$domain$//;
-            $name = '' if $name eq '.';
             when ('SOA') {
                 $zone->{soa} = {
                     retry   => $rr->retry,
@@ -233,7 +238,8 @@ sub to_hash {
                     ttl     => $rr->ttl,
                     expire  => $rr->expire,
                 };
-                unless($domain){
+
+                unless ($domain) {
                     $zone->{domain} = $rr->name;
                     $domain = $zone->{domain};
                     $self->domain($domain);
@@ -309,18 +315,18 @@ sub to_hash {
                     });
             }
         }
-
     }
 
     # sort records lexicographically by type first
     # then by number of sub records
-    # FIXME: this throws heaps of errors!
-    $zone->{rr} = [
-        sort {
-                   $a->{type} cmp $b->{type}
-                || $a->{prio} <=> $b->{prio}
-                || $a->{name} cmp $b->{name}
-        } @{ $zone->{rr} } ] if $zone->{rr};
+    if ($zone->{rr}) {
+        $zone->{rr} = [
+            sort {
+                       ($a->{type} || "") cmp($b->{type} || "")
+                    || ($a->{prio} || 0) <=> ($b->{prio} || 0)
+                    || ($a->{name} || "") cmp($b->{name} || "")
+            } @{ $zone->{rr} } ];
+    }
 
     return $zone;
 }

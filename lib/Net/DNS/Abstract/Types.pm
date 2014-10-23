@@ -40,15 +40,19 @@ sub zonefile_to_net_dns {
     my $zonefile = shift;
 
     my $zone = Net::DNS::ZoneFile::Fast::parse($zonefile);
-    return unless $zone;
+
+    return unless $zone and ref $zone eq 'ARRAY';
+
     my $domain;
-    foreach my $rr (@{$zone}) {
+    foreach my $rr (@$zone) {
         next unless $rr->isa('Net::DNS::RR::SOA');
         $domain = $rr->name;
         last;
     }
+
     my $nd = Net::DNS::Packet->new($domain);
     $nd->push(update => @$zone);
+
     return $nd;
 }
 
@@ -89,6 +93,7 @@ sub our_to_net_dns {
     # convert RR section
     foreach my $rr (@{ $zone->{rr} }) {
         next unless exists $rr->{type};
+
         $nda_zone = $nda_rr->add($nda_zone, update => $rr);
     }
 
