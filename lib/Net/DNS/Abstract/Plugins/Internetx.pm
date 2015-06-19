@@ -2,7 +2,7 @@ package Net::DNS::Abstract::Plugins::Internetx;
 
 use Modern::Perl;
 
-use Any::Moose 'Role';
+use Mouse::Role;
 use Net::DNS;
 use Try::Tiny;
 use Data::Printer;

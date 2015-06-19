@@ -2,7 +2,7 @@ package Net::DNS::Abstract::Plugins::Daemonise;
 
 use Modern::Perl;
 
-use Any::Moose 'Role';
+use Mouse::Role;
 
 # ABSTRACT: interface to Daemonise
 
