@@ -2,7 +2,7 @@ package Net::DNS::Abstract::Plugins::Internetx;
 
 use Modern::Perl;
 
-use Any::Moose 'Role';
+use Mouse::Role;
 use Net::DNS;
 use Try::Tiny;
 use Data::Printer;
@@ -178,7 +178,7 @@ sub _parse_ix {
 
     my $nda_rr = Net::DNS::Abstract::RR->new(domain => $self->domain);
 
-    # add SOA first
+    # add SOA record first
     try {
         $nda_zone = $nda_rr->add(
             $nda_zone,
@@ -198,60 +198,26 @@ sub _parse_ix {
         warn "Could not add SOA record: " . p($zone);
     };
 
-    if (ref $zone->{rr} eq 'ARRAY') {
-        foreach my $rr (@{ $zone->{rr} }) {
-            $rr->{name}->{content} = ''
-                unless exists $rr->{name}->{content};
-            $rr->{name}->{content} = ''
-                if ($rr->{name}->{content} eq $self->domain);
-            $rr->{value}->{content} =~ s/\.+$//;
-
-            my $tmp_nda_zone;
-            try {
-                $tmp_nda_zone = $nda_rr->add(
-                    $nda_zone,
-                    answer => {
-                        ttl => $rr->{ttl}->{content} || 3600,
-                        name  => $rr->{name}->{content},
-                        value => $rr->{value}->{content},
-                        type  => uc($rr->{type}->{content}),
-                        prio  => $rr->{pref}->{content} || undef,
-                    });
-            }
-            catch {
-                warn "Could not add RR " . p($rr);
-            };
-            $nda_zone = $tmp_nda_zone if $tmp_nda_zone;
-        }
-    }
-    else {
-        $zone->{rr}->{name}->{content} = ''
-            unless exists $zone->{rr}->{name}->{content};
-        $zone->{rr}->{name}->{content} = ''
-            if ($zone->{rr}->{name}->{content} eq $self->domain);
-        $zone->{rr}->{value}->{content} =~ s/\.+$//
-            if exists $zone->{rr}->{value}->{content};
-
+    # add NS records
+    my @ns;
+    foreach my $ns (@{ $zone->{nserver} }) {
         my $tmp_nda_zone;
         try {
             $tmp_nda_zone = $nda_rr->add(
                 $nda_zone,
                 answer => {
-                    ttl => $zone->{rr}->{ttl}->{content} || 3600,
-                    name  => $zone->{rr}->{name}->{content},
-                    value => $zone->{rr}->{value}->{content},
-                    type  => uc($zone->{rr}->{type}->{content}),
-                    prio  => $zone->{rr}->{pref}->{content} || undef,
+                    value => $ns->{name}->{content},
+                    type  => 'NS',
                 });
         }
         catch {
-            warn "Could not add RR " . p($zone);
+            warn "Could not add NS " . p($ns);
         };
-
         $nda_zone = $tmp_nda_zone if $tmp_nda_zone;
     }
 
-    if ($zone->{main}) {
+    # handle IX "main" section (a.k.a. single A record on root domain)
+    if (exists $zone->{main} and ref $zone->{main} eq 'HASH') {
         my $tmp_nda_zone;
         try {
             $tmp_nda_zone = $nda_rr->add(
@@ -290,21 +256,60 @@ sub _parse_ix {
     #    }
     #}
 
-    my @ns;
-    foreach my $ns (@{ $zone->{nserver} }) {
-        my $tmp_nda_zone;
-        try {
-            $tmp_nda_zone = $nda_rr->add(
-                $nda_zone,
-                answer => {
-                    value => $ns->{name}->{content},
-                    type  => 'NS'
-                });
+    # add optional extra RRs
+    if (exists $zone->{rr}) {
+        if (ref $zone->{rr} eq 'ARRAY') {
+            foreach my $rr (@{ $zone->{rr} }) {
+                $rr->{name}->{content} = ''
+                    unless exists $rr->{name}->{content};
+                $rr->{name}->{content} = ''
+                    if ($rr->{name}->{content} eq $self->domain);
+                $rr->{value}->{content} =~ s/\.+$//;
+
+                my $tmp_nda_zone;
+                try {
+                    $tmp_nda_zone = $nda_rr->add(
+                        $nda_zone,
+                        answer => {
+                            ttl => $rr->{ttl}->{content} || 3600,
+                            name  => $rr->{name}->{content},
+                            value => $rr->{value}->{content},
+                            type  => uc($rr->{type}->{content}),
+                            prio  => $rr->{pref}->{content} || undef,
+                        });
+                }
+                catch {
+                    warn "Could not add RR " . p($rr);
+                };
+                $nda_zone = $tmp_nda_zone if $tmp_nda_zone;
+            }
         }
-        catch {
-            warn "Could not add NS " . p($ns);
-        };
-        $nda_zone = $tmp_nda_zone if $tmp_nda_zone;
+        else {
+            $zone->{rr}->{name}->{content} = ''
+                unless exists $zone->{rr}->{name}->{content};
+            $zone->{rr}->{name}->{content} = ''
+                if ($zone->{rr}->{name}->{content} eq $self->domain);
+            $zone->{rr}->{value}->{content} =~ s/\.+$//
+                if exists $zone->{rr}->{value}->{content};
+
+            my $tmp_nda_zone;
+            try {
+                $tmp_nda_zone = $nda_rr->add(
+                    $nda_zone,
+                    answer => {
+                        ttl => $zone->{rr}->{ttl}->{content} || 3600,
+                        name  => $zone->{rr}->{name}->{content},
+                        value => $zone->{rr}->{value}->{content},
+                        type  => uc($zone->{rr}->{type}->{content}),
+                        prio  => $zone->{rr}->{pref}->{content} || undef,
+                    });
+            }
+            catch {
+                warn "Could not add RR " . p($zone);
+            };
+
+            $nda_zone = $tmp_nda_zone if $tmp_nda_zone;
+        }
     }
 
     $self->zone($nda_zone);
