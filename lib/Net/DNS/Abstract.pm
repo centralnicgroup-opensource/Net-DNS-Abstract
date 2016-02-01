@@ -261,7 +261,8 @@ sub to_hash {
                             name => $name || undef,
                             ttl  => $rr->ttl,
                             type => $rr->type,
-                            value => $rr->nsdname,
+                            value => $rr->nsdname
+                                . '.',    # looks like we miss a dot here!
                         });
                 }
             }
