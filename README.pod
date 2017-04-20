@@ -8,7 +8,7 @@ Net::DNS::Abstract - Net::DNS interface to several DNS backends via API
 
 =head1 VERSION
 
-version 2.6
+version 2.7
 
 =head1 SYNOPSIS
 
