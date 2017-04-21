@@ -149,19 +149,34 @@ sub add {
             return $zone;
         }
         when (/^NS$/i) {
-            $zone->push(
-                $section => Net::DNS::RR->new(
-                    name => (
-                          $rr->{name}
-                        ? $rr->{name} . '.' . $self->domain
-                        : $self->domain
-                    ),
-                    class   => 'IN',
-                    ttl     => $rr->{ttl} || 14400,
-                    type    => $rr->{type},
-                    nsdname => $rr->{value} || 'ns1.iwantmyname.net',
-                ));
-            return $zone;
+            if ($rr->{name} && ($rr->{name} =~ m/*.\.$self->domain/)) {
+                my $ns_value = (
+                    $rr->{value} =~ m/\.$/ ? $rr->{value} : $rr->{value} . '.');
+                $zone->push(
+                    $section => Net::DNS::RR->new(
+                        name    => $rr->{name},
+                        class   => 'IN',
+                        ttl     => $rr->{ttl} || 14400,
+                        type    => $rr->{type},
+                        nsdname => $ns_value,
+                    ));
+                return $zone;
+            }
+            else {
+                $zone->push(
+                    $section => Net::DNS::RR->new(
+                        name => (
+                              $rr->{name}
+                            ? $rr->{name} . '.' . $self->domain
+                            : $self->domain
+                        ),
+                        class   => 'IN',
+                        ttl     => $rr->{ttl} || 14400,
+                        type    => $rr->{type},
+                        nsdname => $rr->{value} || 'ns1.iwantmyname.net',
+                    ));
+                return $zone;
+            }
         }
         default {
             warn(     'add_arr(): '
