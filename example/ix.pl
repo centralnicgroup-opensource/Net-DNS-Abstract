@@ -19,7 +19,7 @@ my $zone_file = ';; HEADER SECTION
 ;; PREREQUISITE SECTION (0 records)
 
 ;; UPDATE SECTION (9 records)
-domain.tld. 86400   IN      SOA     ns1.iwantmyname.net. email\@domain.tld. (
+domain.tld. 86400   IN      SOA     ns1.iwantmyname.net. email@domain.tld. (
                                         1364440813      ; Serial
                                         0       ; Refresh
                                         72003600000     ; Retry
@@ -46,7 +46,7 @@ my $zone = $dns->our_to_net_dns({
     'domain' => 'domain.tld',
     'soa'    => {
         'retry'   => '7200',
-        'email'   => 'email\\@domain.tld',
+        'email'   => 'email\@domain.tld',
         'refresh' => '86400',
         'ttl'     => '0',
         'expire'  => '3600000'
