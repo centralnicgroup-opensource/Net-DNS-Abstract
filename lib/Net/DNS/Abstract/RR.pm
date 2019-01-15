@@ -131,6 +131,12 @@ sub add {
             #my @txts = $rr->{value} =~ /(.{1,255})\W/gms;
 
             #foreach my $txt (@txts) {
+
+            # Net::DNS::RR srips leading quotes `"' because it employs
+            # JSON->encode to store its values so we need to escape it
+            # fixes https://github.com/ideegeo/iwmn-base/issues/1567
+            $rr->{value} =~ s/^"/\\"/;
+
             $zone->push(
                 $section => Net::DNS::RR->new(
                     name => (
