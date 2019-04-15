@@ -6,7 +6,7 @@ use Mouse;
 use Module::Load;
 use Net::DNS;
 use Net::DNS::Packet;
-use Net::DNS::ZoneFile::Fast;
+use Net::DNS::ZoneFile;
 use Data::Dump 'dump';
 
 use lib 'lib';

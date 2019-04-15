@@ -5,7 +5,7 @@ use Modern::Perl;
 use Mouse::Util::TypeConstraints;
 use MouseX::Types -declare => [qw(Zone)];
 use MouseX::Types::Mouse;
-use Net::DNS::ZoneFile::Fast;
+use Net::DNS::ZoneFile;
 use Net::DNS::Packet;
 use Data::Dump 'dump';
 
@@ -39,7 +39,7 @@ Returns: Net::DNS::Packet object representation of the zone or undef on error
 sub zonefile_to_net_dns {
     my $zonefile = shift;
 
-    my $zone = Net::DNS::ZoneFile::Fast::parse($zonefile);
+    my $zone = Net::DNS::ZoneFile::parse($zonefile);
 
     return unless $zone and ref $zone eq 'ARRAY';
 
