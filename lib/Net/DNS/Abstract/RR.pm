@@ -4,6 +4,10 @@ use Modern::Perl;
 
 use Mouse;
 use experimental 'smartmatch';
+use Text::Wrap 'wrap';
+
+# TXT records can be a max of 255 characters, wrap at word boundaries
+$Text::Wrap::columns = 255;
 
 # ABSTRACT: Net::DNS::Abstract Resource Record methods
 
@@ -126,31 +130,32 @@ sub add {
 
             # split too long TXT records into multiple records on word boundary
             # limit: 255 chars
-            # FIXME this currently breaks SPF records as it cuts off the
-            # trailing '~all'. temporarily disabled by [norbu09]
-            #my @txts = $rr->{value} =~ /(.{1,255})\W/gms;
+            my @txt = split(/\n/, wrap('', '', $rr->{value}));
+            foreach my $txt (@txt) {
 
-            #foreach my $txt (@txts) {
+                # in case of multiple TXT records: they are concatenated without
+                # spaces, e.g. for SPF records and therefore need a trailing
+                # space added
+                $txt .= ' ' if scalar(@txt) > 1;
 
-            # Net::DNS::RR srips leading quotes `"' because it employs
-            # JSON->encode to store its values so we need to escape it
-            # fixes https://github.com/ideegeo/iwmn-base/issues/1567
-            $rr->{value} =~ s/^"/\\"/;
+                # Net::DNS::RR srips leading quotes `"' because it employs
+                # JSON->encode to store its values so we need to escape it
+                # fixes https://github.com/ideegeo/iwmn-base/issues/1567
+                $txt =~ s/^"/\\"/;
 
-            $zone->push(
-                $section => Net::DNS::RR->new(
-                    name => (
-                          $rr->{name}
-                        ? $rr->{name} . '.' . $self->domain
-                        : $self->domain
-                    ),
-                    class   => 'IN',
-                    ttl     => $rr->{ttl} || 3600,
-                    type    => $rr->{type},
-                    txtdata => $rr->{value},
-                ));
-
-            #}
+                $zone->push(
+                    $section => Net::DNS::RR->new(
+                        name => (
+                              $rr->{name}
+                            ? $rr->{name} . '.' . $self->domain
+                            : $self->domain
+                        ),
+                        class   => 'IN',
+                        ttl     => $rr->{ttl} || 3600,
+                        type    => $rr->{type},
+                        txtdata => $txt,
+                    ));
+            }
 
             return $zone;
         }
