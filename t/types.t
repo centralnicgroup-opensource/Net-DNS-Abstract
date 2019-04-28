@@ -24,10 +24,7 @@ domain.tld.	3600	IN	A	50.112.122.158
 mail.domain.tld.	3600	IN	A	62.116.130.8
 www.domain.tld.	3600	IN	CNAME	domain.tld.
 sub.domain.tld.	3600	IN	NS	ns02.net.
-spf.domain.tld.	3600	IN	TXT	(
-	"v=spf1 mx include:a.very.long.spf.record include:to.test.TXT.record.splitting at 255 characters and it is taking me way more time than epected to come up with a proper example for this totally ridiculous scenario. who uses such long records and what is "
-	)
-spf.domain.tld.	3600	IN	TXT	"wrong with you? ~all "
+spf.domain.tld.	3600	IN	TXT	( "v=spf1 mx include:a.very.long.spf.record include:to.test.TXT.record.splitting at 255 characters and it is taking me way more time than epected to come up with a proper example for this totally ridiculous scenario. who uses such long records and what is wrong with you? ~all" )
 domain.tld.	14400	IN	NS	ns1.iwantmyname.net.
 domain.tld.	14400	IN	NS	ns2.iwantmyname.net.
 domain.tld.	14400	IN	NS	ns3.iwantmyname.net.
@@ -85,23 +82,6 @@ domain.tld.	14400	IN	NS	ns4.iwantmyname.net.';
             expire  => 3600000,
         },
     };
-    my $zone_hash_txt = dclone $zone_hash;
-    pop(@{ $zone_hash_txt->{rr} });
-    push(
-        @{ $zone_hash_txt->{rr} }, {
-            'value' =>
-                'v=spf1 mx include:a.very.long.spf.record include:to.test.TXT.record.splitting at 255 characters and it is taking me way more time than epected to come up with a proper example for this totally ridiculous scenario. who uses such long records and what is ',
-            'ttl'  => 3600,
-            'name' => 'spf',
-            'type' => 'TXT',
-        });
-    push(
-        @{ $zone_hash_txt->{rr} }, {
-            'value' => 'wrong with you? ~all ',
-            'ttl'   => 3600,
-            'name'  => 'spf',
-            'type'  => 'TXT',
-        });
 
     my $dns = Net::DNS::Abstract->new(domain => 'domain.tld');
     isa_ok($dns, 'Net::DNS::Abstract', "created Net::DNS::Abstract object");
@@ -124,7 +104,7 @@ domain.tld.	14400	IN	NS	ns4.iwantmyname.net.';
     # test hash export
     my $hash = $dns->to_hash;
     ok($hash, "exported hash from NDA");
-    is_deeply($hash, $zone_hash_txt, "compare hash representation of zone");
+    is_deeply($hash, $zone_hash, "compare hash representation of zone");
 
     # test hash import
     my $dns3 = Net::DNS::Abstract->new(domain => 'domain.tld');
