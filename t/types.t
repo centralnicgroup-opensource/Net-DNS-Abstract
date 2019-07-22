@@ -3,7 +3,6 @@
 use Test::More;
 use Test::LongString;
 use Net::DNS::Packet;
-use Storable 'dclone';
 use lib 'lib';
 
 BEGIN { use_ok('Net::DNS::Abstract'); }
@@ -117,5 +116,11 @@ domain.tld.	14400	IN	NS	ns4.iwantmyname.net.';
     my $f = $dns4->zone($e);
     ok($f, "loaded NDA zone as zone");
     is($dns, $dns4, "compare two DNS zones");
+
+    # compare export of imported zone
+    $hash = $dns4->to_hash;
+    ok($hash, "exported hash from previously imported NDA");
+    is_deeply($hash, $dns3->to_hash,
+        "compare hash representation of previously imported zone");
 };
 done_testing();
