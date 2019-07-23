@@ -180,6 +180,21 @@ sub add {
                 ));
             return $zone;
         }
+        when (/^CAA$/i) {
+            my ($flags, $tag, $value) = split(/\s+/, $rr->{value}, 3);
+
+            $zone->push(
+                $section => Net::DNS::RR->new(
+                    name  => $rr->{name},
+                    class => 'IN',
+                    ttl   => $rr->{ttl} || 14400,
+                    type  => $rr->{type},
+                    flags => $flags,
+                    tag   => $tag,
+                    value => $value,
+                ));
+            return $zone;
+        }
         default {
             warn(     'add_arr(): '
                     . $self->domain

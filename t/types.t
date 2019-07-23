@@ -23,6 +23,7 @@ domain.tld.	3600	IN	A	50.112.122.158
 mail.domain.tld.	3600	IN	A	62.116.130.8
 www.domain.tld.	3600	IN	CNAME	domain.tld.
 sub.domain.tld.	3600	IN	NS	ns02.net.
+sub.domain.tld. 14400   IN  CAA 0 tag value
 spf.domain.tld.	3600	IN	TXT	( "v=spf1 mx include:a.very.long.spf.record include:to.test.TXT.record.splitting at 255 characters and it is taking me way more time than epected to come up with a proper example for this totally ridiculous scenario. who uses such long records and what is wrong with you? ~all" )
 domain.tld.	14400	IN	NS	ns1.iwantmyname.net.
 domain.tld.	14400	IN	NS	ns2.iwantmyname.net.
@@ -55,6 +56,11 @@ domain.tld.	14400	IN	NS	ns4.iwantmyname.net.';
                 ttl   => 3600,
                 name  => 'mail',
                 type  => 'A'
+            }, {
+                value => '0 tag value',
+                ttl   => 14400,
+                name  => 'sub',
+                type  => 'CAA',
             }, {
                 value => 'domain.tld',
                 ttl   => 3600,

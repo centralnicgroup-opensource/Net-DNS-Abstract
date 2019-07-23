@@ -301,9 +301,7 @@ sub to_hash {
                         ttl  => $rr->ttl,
                         type => $rr->type,
                         prio => $rr->priority,
-                        value => $rr->weight . ' '
-                            . $rr->port . ' '
-                            . $rr->target,
+                        value => join(' ', $rr->weight, $rr->port, $rr->target),
                     });
             }
             when ('TXT') {
@@ -313,6 +311,15 @@ sub to_hash {
                         ttl  => $rr->ttl,
                         type => $rr->type,
                         value => $rr->txtdata,
+                    });
+            }
+            when ('CAA') {
+                push(
+                    @{ $zone->{rr} }, {
+                        name => $name || undef,
+                        ttl  => $rr->ttl,
+                        type => $rr->type,
+                        value => join(' ', $rr->flags, $rr->tag, $rr->value),
                     });
             }
         }
