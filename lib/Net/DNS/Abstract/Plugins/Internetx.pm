@@ -191,7 +191,7 @@ sub _parse_ix {
                 retry   => $zone->{soa}->{retry}->{content},
                 refresh => $zone->{soa}->{refresh}->{content},
                 expire  => $zone->{soa}->{expire}->{content},
-                ttl     => $zone->{soa}->{ttl}->{content},
+                minimum => $zone->{soa}->{ttl}->{content},
             });
     }
     catch {

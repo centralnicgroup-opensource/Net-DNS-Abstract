@@ -55,7 +55,7 @@ sub add {
                     retry  => $rr->{retry},
                     refresh => $rr->{refresh},
                     expire  => $rr->{expire},
-                    minimum => $rr->{ttl},
+                    minimum => $rr->{minimum},
                     type    => $rr->{type},
                 ));
             return $zone;

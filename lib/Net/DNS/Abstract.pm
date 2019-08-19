@@ -235,7 +235,7 @@ sub to_hash {
                     retry   => $rr->retry,
                     email   => $rr->rname,
                     refresh => $rr->refresh,
-                    ttl     => $rr->ttl,
+                    minimum => $rr->minimum,
                     expire  => $rr->expire,
                 };
 

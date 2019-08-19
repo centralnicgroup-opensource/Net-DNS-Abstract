@@ -87,7 +87,7 @@ sub our_to_net_dns {
             retry   => $zone->{soa}->{retry},
             expire  => $zone->{soa}->{expire},
             refresh => $zone->{soa}->{refresh},
-            ttl     => $zone->{soa}->{ttl},
+            minimum => $zone->{soa}->{minimum},
         });
 
     # convert RR section

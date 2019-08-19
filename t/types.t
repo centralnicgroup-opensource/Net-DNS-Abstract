@@ -17,7 +17,7 @@ subtest 'Author Tests', sub {
 				86400		;refresh
 				7200		;retry
 				3600000		;expire
-				3600		;minimum
+				86400		;minimum
 	)
 domain.tld.	3600	IN	A	50.112.122.158
 mail.domain.tld.	3600	IN	A	62.116.130.8
@@ -83,7 +83,7 @@ domain.tld.	14400	IN	NS	ns4.iwantmyname.net.';
             email   => 'email@domain.tld',
             retry   => 7200,
             refresh => 86400,
-            ttl     => 3600,
+            minimum => 86400,
             expire  => 3600000,
         },
     };
